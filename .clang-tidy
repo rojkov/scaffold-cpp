@@ -1,0 +1,12 @@
+SystemHeaders: false
+HeaderFilterRegex: '.*src'
+Checks:
+  - '-*'
+  - 'clang-analyzer-*'
+  - 'concurrency-*'
+  - 'cppcoreguidelines-*'
+  - 'modernize-*'
+  - 'misc-*'
+  - 'perforamnce-*'
+  - 'portability-*'
+  - 'readability-*'
