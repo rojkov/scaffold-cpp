@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include "carrot/common/pure.hpp"
+#include "carrot/common/pure.hh"
 
 namespace carrot {
 namespace event {
