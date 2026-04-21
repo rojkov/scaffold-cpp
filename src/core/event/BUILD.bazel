@@ -8,5 +8,6 @@ cc_library(
     deps = [
         "//:liburing",
         "//carrot/event:dispatcher_interface",
+        "//carrot/event:io_object_interface",
     ],
 )

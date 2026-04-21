@@ -3,5 +3,8 @@ load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 cc_binary(
     name = "gateway",
     srcs = ["gateway.cc"],
-    deps = ["//src/core/event:dispatcher_impl_lib"],
+    deps = [
+        "//carrot/event:io_object_interface",
+        "//src/core/event:dispatcher_impl_lib",
+    ],
 )
