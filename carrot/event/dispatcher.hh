@@ -24,6 +24,6 @@ public:
   virtual void SubmitCommand(Command cmd) PURE;
 };
 
-using DispatcherPtr = std::unique_ptr<Dispatcher>;
+using DispatcherSharedPtr = std::shared_ptr<Dispatcher>;
 
 } // namespace carrot::event

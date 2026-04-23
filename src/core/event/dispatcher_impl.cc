@@ -1,11 +1,8 @@
 #include "src/core/event/dispatcher_impl.hh"
 
-#include <print>
-
 #include "carrot/event/io_object.hh"
 
-namespace carrot {
-namespace event {
+namespace carrot::event {
 
 DispatcherImpl::DispatcherImpl() { io_uring_queue_init(entries_num_, &ring_, 0); }
 
@@ -32,12 +29,12 @@ void DispatcherImpl::Run() {
       auto* obj = static_cast<IOObject*>(io_uring_cqe_get_data(cqe));
       if (obj != nullptr) {
         obj->HandleCompletion(cqe->res, cqe->flags);
-      } else {
-        std::println("oops");
       }
     }
+
     io_uring_cq_advance(&ring_, head);
   }
+
   io_uring_queue_exit(&ring_);
 }
 
@@ -45,5 +42,4 @@ void DispatcherImpl::Shutdown() { is_finishing_ = true; }
 
 void DispatcherImpl::SubmitCommand(Command cmd) { command_queue_.push_back(cmd); }
 
-} // namespace event
-} // namespace carrot
+} // namespace carrot::event

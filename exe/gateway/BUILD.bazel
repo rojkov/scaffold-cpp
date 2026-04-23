@@ -4,7 +4,7 @@ cc_binary(
     name = "gateway",
     srcs = ["gateway.cc"],
     deps = [
-        "//carrot/event:io_object_interface",
         "//src/core/event:dispatcher_impl_lib",
+        "//src/gateway:application_lib",
     ],
 )
