@@ -1,4 +1,4 @@
-#include "src/gateway/application.hh"
+#include "gateway/application.hh"
 
 #include <err.h>
 

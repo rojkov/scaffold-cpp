@@ -1,4 +1,4 @@
-#include "src/core/event/dispatcher_impl.hh"
+#include "core/event/dispatcher_impl.hh"
 
 #include "carrot/event/io_object.hh"
 

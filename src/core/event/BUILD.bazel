@@ -1,13 +1,13 @@
-load("@rules_cc//cc:defs.bzl", "cc_library")
+load("//bazel:build_system.bzl", "carrot_cc_library")
 
-cc_library(
+carrot_cc_library(
     name = "dispatcher_impl_lib",
     srcs = ["dispatcher_impl.cc"],
     hdrs = ["dispatcher_impl.hh"],
     visibility = ["//visibility:public"],
     deps = [
         "//:liburing",
-        "//carrot/event:dispatcher_interface",
-        "//carrot/event:io_object_interface",
+        "//include/carrot/event:dispatcher_interface",
+        "//include/carrot/event:io_object_interface",
     ],
 )
