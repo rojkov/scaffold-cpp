@@ -1,5 +1,5 @@
-#include "src/core/event/dispatcher_impl.hh"
-#include "src/gateway/application.hh"
+#include "core/event/dispatcher_impl.hh"
+#include "gateway/application.hh"
 
 auto main() -> int {
   carrot::event::DispatcherSharedPtr dispatcher = std::make_shared<carrot::event::DispatcherImpl>();
