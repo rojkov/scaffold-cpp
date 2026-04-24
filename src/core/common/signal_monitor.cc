@@ -8,7 +8,12 @@
 namespace carrot::common {
 
 SignalMonitor::SignalMonitor(event::DispatcherSharedPtr dispatcher)
-    : dispatcher_(std::move(dispatcher)) {}
+    : dispatcher_(std::move(dispatcher)) {
+
+  carrot::event::Command activate_signal_handling{.destination_ = this};
+
+  dispatcher_->SubmitCommand(activate_signal_handling);
+}
 
 void SignalMonitor::HandleCompletion(int res, [[maybe_unused]] uint32_t flags) {
   assert(dispatcher_ != nullptr);
