@@ -52,6 +52,8 @@ Connection::Connection(int connection_fd, event::DispatcherSharedPtr dispatcher)
   dispatcher_->PrepareRead(this, fd_, buffer_, 0);
 }
 
+// TODO: drop this handler since it should be responsibility of ReadBuffer and WriteBuffer to handle
+// completion events.
 void Connection::HandleCompletion(int res, uint32_t flags) {
   LOG_DEBUG("Got read {} bytes. Flags: {}", res, flags);
   if (res != 0) {
