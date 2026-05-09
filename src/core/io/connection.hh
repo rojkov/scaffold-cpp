@@ -45,8 +45,12 @@ class ReadBuffer : public event::IOObject {
 public:
   explicit ReadBuffer(std::function<void(ReadBuffer*)> on_read_completed);
 
+  // Get a contiguous span available for handling.
   auto GetSpan() -> std::span<std::byte>;
+  // Linearize the read buffer to make it contiguous, so we can parse it without
+  // making copies of it.
   void Pullup(size_t size);
+  void Drain(size_t size);
 
   // IOObject interface
   void HandleCompletion(int res, uint32_t flags) override;

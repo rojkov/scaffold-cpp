@@ -14,7 +14,6 @@ auto ReadBuffer::GetSpan() -> std::span<std::byte> {
   return chunks_.back()->GetReadArea();
 }
 
-// Linearize the read buffer to make it contiguous.
 // TODO: make it return not void, but something indicating success or failure.
 void ReadBuffer::Pullup(size_t size) {
   if (active_chunk_.size() == 0 && chunks_.front()->ReadableSize() >= size) {
