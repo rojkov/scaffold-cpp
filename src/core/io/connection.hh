@@ -1,12 +1,10 @@
 #pragma once
 
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <deque>
 #include <functional>
 #include <span>
-#include <string>
 #include <vector>
 
 #include "carrot/event/dispatcher.hh"
