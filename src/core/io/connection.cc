@@ -242,6 +242,8 @@ void Connection::OnReadCompleted(ReadBuffer* /*unused*/, int res) {
               read_buffer_.GetTotalReadableSize());
   }
 
+  ParseMessages();
+
   SubmitRead();
   if (write_buffer_.HasPendingWrite()) {
     SubmitWrite();
@@ -256,6 +258,40 @@ void Connection::OnWriteCompleted(WriteBuffer* /*unused*/, int res) {
 
   if (write_buffer_.HasPendingWrite()) {
     SubmitWrite();
+  }
+}
+
+void Connection::ParseMessages() {
+  while (read_buffer_.HasReadableData()) {
+    auto current_span = read_buffer_.GetSpan();
+    if (current_span.empty()) {
+      break;
+    }
+
+    auto parse_result = SimpleLineProtocolParser::TryParseMessage(current_span);
+    if (!parse_result.found_message) {
+      break;
+    }
+
+    auto message_bytes = current_span.subspan(0, parse_result.message_length);
+    SimpleLineProtocolParser::ProcessMessage(message_bytes);
+
+    read_buffer_.Drain(parse_result.message_length);
+
+    std::string echo_response = "Echo: ";
+    auto* begin = reinterpret_cast<const char*>(message_bytes.data());
+    size_t len = message_bytes.size();
+    if (len > 0 && begin[len - 1] == '\n') {
+      len--;
+      if (len > 0 && begin[len - 1] == '\r') {
+        len--;
+      }
+    }
+    echo_response.append(begin, len);
+    echo_response.append("\n");
+
+    auto echo_bytes = std::as_bytes(std::span(echo_response));
+    Send(echo_bytes);
   }
 }
 
