@@ -1,0 +1,11 @@
+load("//bazel:build_system.bzl", "carrot_cc_test")
+
+carrot_cc_test(
+    name = "connection_test",
+    srcs = ["connection_test.cc"],
+    deps = [
+        "//src/core/io:connection_lib",
+        "//test/mocks/event:event_mocks_lib",
+        "@googletest//:gtest_main",
+    ],
+)
