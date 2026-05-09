@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include "core/io/simple_line_protocol_parser.hh"
 #include "core/logging/log.hh"
 
 namespace carrot::io {
