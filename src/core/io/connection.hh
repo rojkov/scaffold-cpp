@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <cassert>
 #include <deque>
 #include <functional>
 
@@ -18,8 +19,19 @@ public:
   auto GetReadArea() -> std::span<std::byte> {
     return {data_.data() + filled_, BUFFER_SIZE - filled_};
   }
+  void Fill(size_t size) {
+    assert(filled_ + size <= BUFFER_SIZE);
+    filled_ += size;
+  }
   [[nodiscard]] auto IsFullForReading() const -> bool { return filled_ == BUFFER_SIZE; }
   [[nodiscard]] auto ReadableSize() const -> size_t { return filled_ - consumed_; }
+  [[nodiscard]] auto WritableSize() const -> size_t { return BUFFER_SIZE - filled_; }
+  [[nodiscard]] auto Consume(size_t size) -> std::span<std::byte> {
+    assert((filled_ - consumed_) >= size);
+    size_t prev_consumed{consumed_};
+    consumed_ += size;
+    return {data_.data() + prev_consumed, size};
+  }
 
 private:
   std::array<std::byte, BUFFER_SIZE> data_{};
@@ -31,7 +43,8 @@ using ChunkPtr = std::unique_ptr<Chunk>;
 
 class ReadBuffer : public event::IOObject {
 public:
-  ReadBuffer(std::function<void(ReadBuffer*)> on_read_completed);
+  explicit ReadBuffer(std::function<void(ReadBuffer*)> on_read_completed);
+
   auto GetSpan() -> std::span<std::byte>;
   void Pullup(size_t size);
 

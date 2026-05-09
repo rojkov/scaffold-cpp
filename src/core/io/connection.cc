@@ -14,6 +14,8 @@ auto ReadBuffer::GetSpan() -> std::span<std::byte> {
   return chunks_.back()->GetReadArea();
 }
 
+// Linearize the read buffer to make it contiguous.
+// TODO: make it return not void, but something indicating success or failure.
 void ReadBuffer::Pullup(size_t size) {
   if (active_chunk_.size() == 0 && chunks_.front()->ReadableSize() >= size) {
     return; // true
@@ -23,13 +25,27 @@ void ReadBuffer::Pullup(size_t size) {
     return; // true
   }
 
-  if (active_chunk_.capacity() - active_chunk_consumed_ >= size &&
-      chunks_.front()->ReadableSize() >= (size - (active_chunk_.size() - active_chunk_consumed_))) {
-    // std::memcpy(d,s,n);
-    active_chunk_.append_range(std::span(
-        chunks_.front()->Consume(size - (active_chunk_.size() - active_chunk_consumed_))));
-    return; // true
+  // Still can fit in active_chunk_.
+  if (active_chunk_.capacity() - active_chunk_consumed_ >= size) {
+    // In IO buffer there's enough data not to get to the next one.
+    if (chunks_.front()->ReadableSize() >=
+        (size - (active_chunk_.size() - active_chunk_consumed_))) {
+      // std::memcpy(d,s,n);
+      active_chunk_.append_range(std::span(
+          chunks_.front()->Consume(size - (active_chunk_.size() - active_chunk_consumed_))));
+      return; // true
+    }
   }
+}
+
+void ReadBuffer::HandleCompletion(int res, uint32_t flags) {
+  LOG_DEBUG("Got read {} bytes. Flags: {}", res, flags);
+  if (res > 0) {
+    on_read_completed_(this);
+    return;
+  }
+
+  // TODO: call on_disconnect_();
 }
 
 Connection::Connection(int connection_fd, event::DispatcherSharedPtr dispatcher)
