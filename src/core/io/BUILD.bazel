@@ -1,10 +1,17 @@
 load("//bazel:build_system.bzl", "carrot_cc_library")
 
 carrot_cc_library(
+    name = "chunk_lib",
+    srcs = ["chunk.cc"],
+    hdrs = ["chunk.hh"],
+)
+
+carrot_cc_library(
     name = "connection_lib",
     srcs = ["connection.cc"],
     hdrs = ["connection.hh"],
     deps = [
+        ":chunk_lib",
         "//include/carrot/event:dispatcher_interface",
         "//include/carrot/event:io_object_interface",
         "//src/core/logging:log_lib",
