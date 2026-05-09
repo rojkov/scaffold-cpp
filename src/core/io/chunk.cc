@@ -5,11 +5,11 @@
 namespace carrot::io {
 
 auto Chunk::GetReadArea() -> std::span<std::byte> {
-  return {data_.data() + consumed_, filled_ - consumed_};
+  return std::span{data_}.subspan(consumed_, filled_ - consumed_);
 }
 
 auto Chunk::GetWriteArea() -> std::span<std::byte> {
-  return {data_.data() + filled_, BUFFER_SIZE - filled_};
+  return std::span{data_}.subspan(filled_, BUFFER_SIZE - filled_);
 }
 
 void Chunk::Fill(size_t size) {
