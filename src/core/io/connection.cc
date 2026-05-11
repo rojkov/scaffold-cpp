@@ -5,6 +5,8 @@
 
 namespace carrot::io {
 
+Connection::~Connection() = default;
+
 Connection::Connection(int connection_fd, event::DispatcherSharedPtr dispatcher,
                        std::unique_ptr<ProtocolParser> parser)
     : fd_{connection_fd}, dispatcher_{std::move(dispatcher)},
