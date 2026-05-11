@@ -19,6 +19,15 @@ carrot_cc_test(
 )
 
 carrot_cc_test(
+    name = "write_buffer_test",
+    srcs = ["write_buffer_test.cc"],
+    deps = [
+        "//src/core/io:write_buffer_lib",
+        "@googletest//:gtest_main",
+    ],
+)
+
+carrot_cc_test(
     name = "connection_test",
     srcs = ["connection_test.cc"],
     deps = [

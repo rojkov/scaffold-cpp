@@ -18,6 +18,17 @@ carrot_cc_library(
 )
 
 carrot_cc_library(
+    name = "write_buffer_lib",
+    srcs = ["write_buffer.cc"],
+    hdrs = ["write_buffer.hh"],
+    deps = [
+        ":chunk_lib",
+        "//include/carrot/event:io_object_interface",
+        "//src/core/logging:log_lib",
+    ],
+)
+
+carrot_cc_library(
     name = "simple_line_protocol_parser_lib",
     srcs = ["simple_line_protocol_parser.cc"],
     hdrs = ["simple_line_protocol_parser.hh"],
@@ -34,6 +45,7 @@ carrot_cc_library(
         ":chunk_lib",
         ":read_buffer_lib",
         ":simple_line_protocol_parser_lib",
+        ":write_buffer_lib",
         "//include/carrot/event:dispatcher_interface",
     ],
 )
