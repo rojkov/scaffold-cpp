@@ -10,6 +10,15 @@ carrot_cc_test(
 )
 
 carrot_cc_test(
+    name = "read_buffer_test",
+    srcs = ["read_buffer_test.cc"],
+    deps = [
+        "//src/core/io:read_buffer_lib",
+        "@googletest//:gtest_main",
+    ],
+)
+
+carrot_cc_test(
     name = "connection_test",
     srcs = ["connection_test.cc"],
     deps = [

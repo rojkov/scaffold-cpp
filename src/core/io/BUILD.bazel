@@ -7,6 +7,17 @@ carrot_cc_library(
 )
 
 carrot_cc_library(
+    name = "read_buffer_lib",
+    srcs = ["read_buffer.cc"],
+    hdrs = ["read_buffer.hh"],
+    deps = [
+        ":chunk_lib",
+        "//include/carrot/event:io_object_interface",
+        "//src/core/logging:log_lib",
+    ],
+)
+
+carrot_cc_library(
     name = "simple_line_protocol_parser_lib",
     srcs = ["simple_line_protocol_parser.cc"],
     hdrs = ["simple_line_protocol_parser.hh"],
@@ -21,10 +32,9 @@ carrot_cc_library(
     hdrs = ["connection.hh"],
     deps = [
         ":chunk_lib",
+        ":read_buffer_lib",
         ":simple_line_protocol_parser_lib",
         "//include/carrot/event:dispatcher_interface",
-        "//include/carrot/event:io_object_interface",
-        "//src/core/logging:log_lib",
     ],
 )
 
