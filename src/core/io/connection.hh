@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <cstddef>
+#include <memory>
 #include <span>
 
 #include "carrot/event/dispatcher.hh"
@@ -11,9 +12,12 @@
 
 namespace carrot::io {
 
+class ProtocolParser;
+
 class Connection : public event::IOObject {
 public:
-  explicit Connection(int connection_fd, event::DispatcherSharedPtr dispatcher);
+  explicit Connection(int connection_fd, event::DispatcherSharedPtr dispatcher,
+                      std::unique_ptr<ProtocolParser> parser = nullptr);
 
   void HandleCompletion(int res, uint32_t flags) override {}
   void ProcessCommand(event::Command cmd) override {}
@@ -31,6 +35,7 @@ private:
   event::DispatcherSharedPtr dispatcher_;
   ReadBuffer read_buffer_;
   WriteBuffer write_buffer_;
+  std::unique_ptr<ProtocolParser> parser_;
 };
 
 } // namespace carrot::io

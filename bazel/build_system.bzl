@@ -35,7 +35,13 @@ def carrot_cc_library(
         srcs = [],
         hdrs = [],
         deps = [],
-        visibility = ["//visibility:private"]):
+        visibility = ["//visibility:private"],
+        copts = None,
+        linkopts = None):
+    if copts == None:
+        copts = []
+    if linkopts == None:
+        linkopts = []
     cc_library(
         name = name,
         srcs = srcs,
@@ -43,6 +49,8 @@ def carrot_cc_library(
         deps = deps,
         visibility = visibility + visibility_for_tests(native.package_name()),
         include_prefix = carrot_include_prefix(native.package_name()),
+        copts = copts,
+        linkopts = linkopts,
     )
 
 def carrot_cc_test_library(

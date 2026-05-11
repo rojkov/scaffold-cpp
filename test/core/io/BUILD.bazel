@@ -36,3 +36,13 @@ carrot_cc_test(
         "@googletest//:gtest_main",
     ],
 )
+
+carrot_cc_test(
+    name = "protocol_parser_test",
+    srcs = ["protocol_parser_test.cc"],
+    deps = [
+        "//src/core/io:http_protocol_parser_lib",
+        "//src/core/io:simple_line_protocol_parser_lib",
+        "@googletest//:gtest_main",
+    ],
+)
