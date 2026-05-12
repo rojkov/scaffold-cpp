@@ -22,6 +22,7 @@ auto ReadBuffer::GetSpan() -> std::span<std::byte> {
   }
 
   if (chunks_.empty()) {
+    // There's no readable data -> return an empty buffer.
     return {};
   }
 
@@ -134,9 +135,12 @@ void ReadBuffer::HandleCompletion(int res, uint32_t flags) {
   LOG_DEBUG("Got read {} bytes. Flags: {}", res, flags);
   if (res > 0) {
     if (chunks_.empty()) {
+      // TODO: when this code path can be triggered legitimately? can it?
+      // If it can then what data is going to be placed here?
       chunks_.emplace_back(std::make_unique<Chunk>());
     }
     chunks_.back()->Fill(static_cast<size_t>(res));
+    // TODO: the following two lines look redundant.
     on_read_completed_(this, res);
     return;
   }

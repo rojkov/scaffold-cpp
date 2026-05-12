@@ -18,7 +18,7 @@ public:
 
   /**
    * GetWriteSpan returns a contiguous buffer to write to from a file
-   * descriptor after a read operation scheduled with Dispatcher::PrepareRead().
+   * descriptor for a read operation scheduled with Dispatcher::PrepareRead().
    */
   auto GetWriteSpan() -> std::span<std::byte>;
 
