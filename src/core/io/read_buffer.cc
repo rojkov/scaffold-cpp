@@ -47,6 +47,8 @@ void ReadBuffer::Pullup(size_t size) {
 
   if (active_chunk_consumed_ < active_chunk_.size()) {
     size_t existing = active_chunk_.size() - active_chunk_consumed_;
+    // TODO: isn't `existing` guaranteed to be less than `remaining`?
+    assert(existing < remaining);
     size_t copy_size = std::min(existing, remaining);
     std::copy_n(active_chunk_.begin() + active_chunk_consumed_, copy_size,
                 std::back_inserter(new_chunk));
@@ -58,6 +60,8 @@ void ReadBuffer::Pullup(size_t size) {
       break;
     }
 
+    // TODO: can we release memory owned by the Chunks and destroy the
+    // corresponding Chunk instances here, at the moment of Pullup?
     auto read_area = chunk->GetReadArea();
     size_t copy_size = std::min(read_area.size(), remaining);
     std::copy_n(read_area.begin(), copy_size, std::back_inserter(new_chunk));
@@ -68,7 +72,7 @@ void ReadBuffer::Pullup(size_t size) {
   active_chunk_consumed_ = 0;
 }
 
-void ReadBuffer::ConsumeFromChunks(size_t size) {
+void ReadBuffer::consumeFromChunks(size_t size) {
   while (size > 0 && !chunks_.empty()) {
     size_t available = chunks_.front()->ReadableSize();
     size_t consume_size = std::min(size, available);
@@ -87,7 +91,7 @@ void ReadBuffer::Drain(size_t size) {
     size_t available = active_chunk_.size() - active_chunk_consumed_;
     size_t drain_amount = std::min(available, remaining);
     active_chunk_consumed_ += drain_amount;
-    ConsumeFromChunks(drain_amount);
+    consumeFromChunks(drain_amount);
     remaining -= drain_amount;
     if (active_chunk_consumed_ == active_chunk_.size()) {
       active_chunk_.clear();
@@ -96,7 +100,7 @@ void ReadBuffer::Drain(size_t size) {
   }
 
   if (remaining > 0) {
-    ConsumeFromChunks(remaining);
+    consumeFromChunks(remaining);
   }
 }
 
@@ -104,11 +108,13 @@ auto ReadBuffer::HasReadableData() const -> bool {
   if (active_chunk_consumed_ < active_chunk_.size()) {
     return true;
   }
+
   for (auto const& chunk : chunks_) {
     if (chunk->HasReadableData()) {
       return true;
     }
   }
+
   return false;
 }
 

@@ -7,8 +7,9 @@
 namespace carrot::io {
 
 namespace {
+// TODO: rename to CHUNK_SIZE.
 constexpr size_t BUFFER_SIZE{4096};
-}
+} // namespace
 
 class Chunk {
 public:

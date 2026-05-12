@@ -21,7 +21,7 @@ protected:
   }
 };
 
-TEST_F(ReadBufferTest, GetWriteSpan) {
+TEST_F(ReadBufferTest, GetWriteSpanForNewReadBuffer) {
   auto buffer = CreateReadBuffer();
   auto span = buffer.GetWriteSpan();
   EXPECT_EQ(span.size(), BUFFER_SIZE);
