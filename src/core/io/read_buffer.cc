@@ -29,17 +29,18 @@ auto ReadBuffer::GetSpan() -> std::span<std::byte> {
   return chunks_.front()->GetReadArea();
 }
 
-void ReadBuffer::Pullup(size_t size) {
+auto ReadBuffer::Pullup(size_t size) -> std::span<std::byte> {
   if (GetTotalReadableSize() < size) {
-    return;
+    return {};
   }
 
   if (active_chunk_consumed_ < active_chunk_.size()) {
     if (active_chunk_.size() - active_chunk_consumed_ >= size) {
-      return;
+      return std::span(active_chunk_)
+          .subspan(active_chunk_consumed_, active_chunk_.size() - active_chunk_consumed_);
     }
   } else if (!chunks_.empty() && chunks_.front()->ReadableSize() >= size) {
-    return;
+    return chunks_.front()->GetReadArea();
   }
 
   std::vector<std::byte> new_chunk;
@@ -71,6 +72,8 @@ void ReadBuffer::Pullup(size_t size) {
 
   active_chunk_.swap(new_chunk);
   active_chunk_consumed_ = 0;
+
+  return active_chunk_;
 }
 
 void ReadBuffer::consumeFromChunks(size_t size) {

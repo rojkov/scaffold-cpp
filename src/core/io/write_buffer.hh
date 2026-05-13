@@ -8,10 +8,19 @@
 
 namespace carrot::io {
 
+/**
+ * WriteBuffer is used to write outgoing data to a file descriptor.
+ */
 class WriteBuffer : public event::IOObject {
 public:
   explicit WriteBuffer(std::function<void(WriteBuffer*, int)> on_write_completed);
 
+  /**
+   * Append appends given input data to WriteBuffer
+   * @param data is copied to the instance of WriteBuffer
+   * TODO: is this method needed? Can we pre-allocate a chunk and give it to
+   * a writer to fill in before submitting a write operation?
+   */
   void Append(std::span<const std::byte> data);
   auto GetPendingWriteSpan() -> std::span<std::byte>;
   void Drain(size_t size);

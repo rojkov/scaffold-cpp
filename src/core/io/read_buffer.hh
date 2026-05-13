@@ -32,7 +32,7 @@ public:
    * Pullup lazily linearizes the data contained in the ReadBuffer
    * @param size How much data to place into a contiguous memory area.
    */
-  void Pullup(size_t size);
+  auto Pullup(size_t size) -> std::span<std::byte>;
 
   /**
    * Drain discards a number of bytes from the front of the ReadBuffer,

@@ -21,6 +21,12 @@ protected:
   }
 };
 
+TEST_F(ReadBufferTest, EmptyUponCreationReadBuffer) {
+  auto buffer = CreateReadBuffer();
+  auto span = buffer.GetSpan();
+  EXPECT_TRUE(span.empty());
+}
+
 TEST_F(ReadBufferTest, GetWriteSpanForNewReadBuffer) {
   auto buffer = CreateReadBuffer();
   auto span = buffer.GetWriteSpan();
@@ -81,6 +87,12 @@ TEST_F(ReadBufferTest, MultipleChunks) {
   EXPECT_EQ(buffer.GetTotalReadableSize(), BUFFER_SIZE + 100);
 }
 
+TEST_F(ReadBufferTest, PullupFromEmpty) {
+  auto buffer = CreateReadBuffer();
+  auto span = buffer.Pullup(100);
+  EXPECT_TRUE(span.empty());
+}
+
 TEST_F(ReadBufferTest, PullupContiguous) {
   auto buffer = CreateReadBuffer();
 
@@ -94,9 +106,7 @@ TEST_F(ReadBufferTest, PullupContiguous) {
   buffer.HandleCompletion(50, 0);
 
   // Pullup should linearize across chunks
-  buffer.Pullup(BUFFER_SIZE + 50);
-
-  auto read_span = buffer.GetSpan();
+  auto read_span = buffer.Pullup(BUFFER_SIZE + 50);
   EXPECT_GE(read_span.size(), BUFFER_SIZE + 50);
 }
 
@@ -104,7 +114,7 @@ TEST_F(ReadBufferTest, HasReadableData) {
   auto buffer = CreateReadBuffer();
   EXPECT_FALSE(buffer.HasReadableData());
 
-  auto write_span = buffer.GetWriteSpan();
+  [[maybe_unused]] auto write_span = buffer.GetWriteSpan();
   buffer.HandleCompletion(10, 0);
 
   EXPECT_TRUE(buffer.HasReadableData());
