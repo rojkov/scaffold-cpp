@@ -6,21 +6,17 @@
 #include <span>
 
 #include "carrot/event/dispatcher.hh"
-#include "carrot/event/io_object.hh"
 #include "core/io/protocol_parser.hh"
 #include "core/io/read_buffer.hh"
 #include "core/io/write_buffer.hh"
 
 namespace carrot::io {
 
-class Connection : public event::IOObject {
+class Connection final {
 public:
   explicit Connection(int connection_fd, event::DispatcherSharedPtr dispatcher,
                       std::unique_ptr<ProtocolParser> parser = nullptr);
   ~Connection();
-
-  void HandleCompletion(int res, uint32_t flags) override {}
-  void ProcessCommand(event::Command cmd) override {}
 
   void Send(std::span<const std::byte> data);
 
