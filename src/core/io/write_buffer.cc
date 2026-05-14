@@ -32,6 +32,17 @@ auto WriteBuffer::GetPendingWriteSpan() -> std::span<std::byte> {
   return chunks_.front()->GetReadArea();
 }
 
+auto WriteBuffer::GetNewPreAllocatedSpan() -> std::span<std::byte> {
+  chunks_.emplace_back(std::make_unique<Chunk>());
+  return chunks_.back()->GetWriteArea();
+}
+// TODO: drop?
+void WriteBuffer::CommitWrite() {
+  if (!is_completion_pending_) {
+  }
+  is_completion_pending_ = true;
+}
+
 void WriteBuffer::Drain(size_t size) {
   size_t remaining = size;
   while (remaining > 0 && !chunks_.empty()) {
@@ -46,7 +57,10 @@ void WriteBuffer::Drain(size_t size) {
 }
 
 auto WriteBuffer::HasPendingWrite() const -> bool {
+  LOG_DEBUG("HasPendingWrite()");
   for (auto const& chunk : chunks_) {
+    LOG_DEBUG("HasPendingWrite() * ReadableSize: {}, WriteableSize: {}", chunk->ReadableSize(),
+              chunk->WritableSize());
     if (chunk->HasReadableData()) {
       return true;
     }

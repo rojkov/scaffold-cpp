@@ -23,6 +23,8 @@ public:
    */
   void Append(std::span<const std::byte> data);
   auto GetPendingWriteSpan() -> std::span<std::byte>;
+  auto GetNewPreAllocatedSpan() -> std::span<std::byte>;
+  void CommitWrite();
   void Drain(size_t size);
   [[nodiscard]] auto HasPendingWrite() const -> bool;
 
@@ -33,6 +35,7 @@ public:
 private:
   std::deque<ChunkPtr> chunks_;
   std::function<void(WriteBuffer*, int)> on_write_completed_;
+  bool is_completion_pending_{false};
 };
 
 } // namespace carrot::io

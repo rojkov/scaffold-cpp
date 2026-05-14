@@ -154,6 +154,116 @@ void HttpProtocolParser::ProcessMessage(
   response_callback(response_bytes);
 }
 
+auto HttpProtocolParser::Feed(ReadBuffer& input, WriteBuffer& output) -> bool {
+  while (input.HasReadableData()) {
+    LOG_DEBUG("Feed total readable data: {}", input.GetTotalReadableSize());
+    switch (state_) {
+    case initial: {
+      auto data = input.GetSpan();
+      if (IsHttp2PrefacePrefix(data)) {
+        if (data.size() < sizeof(kHttp2Preface) - 1) {
+          if (input.GetTotalReadableSize() >= sizeof(kHttp2Preface)) {
+            input.Pullup(sizeof(kHttp2Preface));
+          }
+          break;
+        }
+        protocol_type_ = ProtocolType::Http2;
+        state_ = http2_inprogress;
+        LOG_DEBUG("to http2_inprogress");
+      } else {
+        protocol_type_ = ProtocolType::Http1;
+        state_ = http1_headers;
+        LOG_DEBUG("to http1_headers");
+      }
+      break;
+    }
+    case http1_headers: {
+      auto data = input.GetSpan();
+      auto* begin = reinterpret_cast<const char*>(data.data());
+      std::string_view view(begin, data.size());
+      size_t header_end = view.find("\r\n\r\n");
+      if (header_end == std::string_view::npos) {
+        if (data.size() == input.GetTotalReadableSize()) {
+          LOG_DEBUG("*");
+          return false;
+        }
+        input.Pullup(input.GetTotalReadableSize());
+        LOG_DEBUG("*");
+        break;
+      }
+
+      size_t headers_length = header_end + 4;
+      size_t content_length = 0;
+      if (auto content_length_value =
+              FindHeaderValue(view.substr(0, header_end), "content-length")) {
+        if (auto parsed = ParseUInt(*content_length_value)) {
+          content_length = *parsed;
+        }
+      }
+
+      if (content_length == 0) {
+        // Body-less request.
+        sendResponse(output, "empty body");
+        input.Drain(data.size());
+        state_ = initial;
+        LOG_DEBUG("*");
+        return true;
+      }
+
+      size_t total_length = headers_length + content_length;
+      if (view.size() < total_length) {
+        http1_content_length_ = content_length;
+        auto payload = view.substr(header_end + 4);
+        http1_accumulated_body_.assign(payload.begin(), payload.end());
+        state_ = http1_body;
+        input.Drain(data.size());
+        LOG_DEBUG("*");
+        return false;
+      }
+
+      std::string b{"Body:\n"};
+      b.append(view.substr(header_end + 4));
+      sendResponse(output, b);
+      input.Drain(data.size());
+
+      state_ = initial;
+      LOG_DEBUG("*");
+      return true;
+    }
+    case http1_body: {
+      auto data = input.GetSpan();
+      auto* begin = reinterpret_cast<const char*>(data.data());
+      std::string_view view(begin, data.size());
+      http1_accumulated_body_.append(view);
+      if (http1_accumulated_body_.size() >= http1_content_length_) {
+        sendResponse(output, "Body:\n" + http1_accumulated_body_);
+        state_ = initial;
+        input.Drain(http1_content_length_);
+        return true;
+      }
+      break;
+    }
+    case http2_inprogress:
+      assert(false);
+      break;
+    }
+  }
+  return false;
+}
+
+void HttpProtocolParser::sendResponse(WriteBuffer& output, std::string_view body) {
+  // auto new_chunk = output.GetNewPreAllocatedSpan();
+  // auto view = std::span<char>(reinterpret_cast<char*>(new_chunk.data()), new_chunk.size());
+  //  TODO: UB if new_chunk is smaller than the resulting formatted string.
+  auto response = std::format("HTTP/1.1 200 OK\r\nContent-Length: {}\r\nContent-Type: "
+                              "text/plain\r\nConnection: close\r\n\r\n{}",
+                              body.size(), body);
+
+  LOG_DEBUG("sendResponse: {}", body);
+  auto response_bytes = std::as_bytes(std::span(response.data(), response.size()));
+  output.Append(response_bytes);
+}
+
 ssize_t HttpProtocolParser::SendCallback(nghttp2_session* /*session*/, const uint8_t* data,
                                          size_t length, int /*flags*/, void* user_data) {
   auto* parser = static_cast<HttpProtocolParser*>(user_data);

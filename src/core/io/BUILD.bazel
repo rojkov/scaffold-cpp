@@ -31,6 +31,10 @@ carrot_cc_library(
 carrot_cc_library(
     name = "protocol_parser_lib",
     hdrs = ["protocol_parser.hh"],
+    deps = [
+        ":read_buffer_lib",
+        ":write_buffer_lib",
+    ],
 )
 
 carrot_cc_library(
@@ -61,8 +65,6 @@ carrot_cc_library(
     deps = [
         ":chunk_lib",
         ":http_protocol_parser_lib",
-        ":read_buffer_lib",
-        ":write_buffer_lib",
         "//include/carrot/event:dispatcher_interface",
     ],
 )

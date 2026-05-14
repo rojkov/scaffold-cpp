@@ -24,11 +24,16 @@ public:
   auto TryParseMessage(std::span<const std::byte> data) -> ParseResult override;
   void ProcessMessage(std::span<const std::byte> message_data,
                       std::function<void(std::span<const std::byte>)> response_callback) override;
+  auto Feed(ReadBuffer& input, WriteBuffer& output) -> bool override;
 
   static constexpr const char kHttp2Preface[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
 
 private:
   enum class ProtocolType { Unknown, Http1, Http2 };
+  enum state : uint8_t { initial, http1_headers, http1_body, http2_inprogress };
+  state state_{initial};
+  size_t http1_content_length_{0};
+  std::string http1_accumulated_body_;
 
   struct StreamState {
     std::vector<std::byte> body;
@@ -75,6 +80,8 @@ private:
   static auto ParseUInt(std::string_view text) -> std::optional<size_t>;
   static auto FindHeaderValue(std::string_view headers, std::string_view header_name)
       -> std::optional<std::string_view>;
+
+  void sendResponse(WriteBuffer& output, std::string_view body);
 };
 
 } // namespace carrot::io

@@ -51,14 +51,25 @@ void Connection::OnReadCompleted(ReadBuffer* /*unused*/, int res) {
   if (read_buffer_.HasReadableData()) {
     LOG_DEBUG("Connection has {} bytes pending in read buffer",
               read_buffer_.GetTotalReadableSize());
+    parser_->Feed(read_buffer_, write_buffer_);
+    LOG_DEBUG("in write_buffer {}", write_buffer_.HasPendingWrite());
+    auto buffer = read_buffer_.GetWriteSpan();
+    assert(!buffer.empty());
+    dispatcher_->PrepareRead(&read_buffer_, fd_, buffer, 0);
+    // TODO: check if there's no pending write completion.
+    if (write_buffer_.HasPendingWrite()) {
+      SubmitWrite();
+    }
   }
 
+  /*
   ParseMessages();
 
   SubmitRead();
   if (write_buffer_.HasPendingWrite()) {
     SubmitWrite();
   }
+  */
 }
 
 void Connection::OnWriteCompleted(WriteBuffer* /*unused*/, int res) {
