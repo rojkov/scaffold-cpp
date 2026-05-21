@@ -18,6 +18,21 @@ LlhttpParser::LlhttpParser(std::function<void(int res, uint32_t flags)>&& on_rea
 
 LlhttpParser::~LlhttpParser() {}
 
+// PLAN:
+// 1. Hide ReadBuffer()
+// 2. Make LlhttpParser's constructor accept a reference to Dispatcher to
+//    do PrepareRead(). Connection is interested only signals about updates
+//    in a multi-chunked (multi-sliced) input buffer.
+// 3. A parser should request a span (a slice) from the buffer,
+//    PrepareRead() it, store a pointer to it until HandleCompletion() happens,
+//    then parse it when HandleCompletion() actually happens.
+// 4. Consider the case when a part of body has been read, but the message is
+//    not complete. The connection should know what to do with the received
+//    data: either stream it farther chunk by chunk and drain the buffer after
+//    every read completion or wait until the whole message has been received
+//    and parsed. In this case the connection consumes the message at once
+//    (optionally after linearization of the buffer).
+
 auto LlhttpParser::ReadBuffer() -> std::span<std::byte> {
   LOG_DEBUG("LlhttpParser::ReadBuffer");
   chunks_.emplace_back(std::make_unique<Chunk>());
@@ -40,7 +55,7 @@ void LlhttpParser::Parse(size_t length) {
   auto* data = reinterpret_cast<char*>(chunks_.back()->Data().data());
   enum llhttp_errno err = llhttp_execute(&parser_, data, length);
   assert(err == HPE_OK);
-  LOG_DEBUG("Successfully parsed one chunk"); // at {}", chunks_.back()->Data().data());
+  LOG_DEBUG("Successfully parsed one chunk");
 }
 
 auto LlhttpParser::onBody(llhttp_t* parser, const char* at, size_t length) -> int {
@@ -58,11 +73,13 @@ auto LlhttpParser::onMessageComplete(llhttp_t* parser) -> int {
 
 int LlhttpParser::on_body(llhttp_t* parser, const char* at, size_t length) {
   auto* obj = static_cast<LlhttpParser*>(parser->data);
+  assert(obj != nullptr);
   return obj->onBody(parser, at, length);
 }
 
 int LlhttpParser::on_message_complete(llhttp_t* parser) {
   auto* obj = static_cast<LlhttpParser*>(parser->data);
+  assert(obj != nullptr);
   return obj->onMessageComplete(parser);
 }
 
