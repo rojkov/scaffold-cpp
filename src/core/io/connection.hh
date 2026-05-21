@@ -11,7 +11,7 @@ namespace carrot::io {
 
 class Connection final {
 public:
-  explicit Connection(int connection_fd, event::DispatcherSharedPtr dispatcher);
+  Connection(int connection_fd, event::DispatcherSharedPtr dispatcher);
 
 private:
   void onReadCompletion(int res, uint32_t flags);

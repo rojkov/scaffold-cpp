@@ -6,18 +6,6 @@
 
 namespace carrot::io {
 
-namespace {
-int on_body(llhttp_t* parser, const char* at, size_t length) {
-  auto* obj = static_cast<LlhttpParser*>(parser->data);
-  return obj->onBody(parser, at, length);
-}
-int on_message_complete(llhttp_t* parser) {
-  auto* obj = static_cast<LlhttpParser*>(parser->data);
-  return obj->onMessageComplete(parser);
-}
-
-} // namespace
-
 LlhttpParser::LlhttpParser(std::function<void(int res, uint32_t flags)>&& on_read_completion,
                            std::function<void(std::span<const std::byte>)>&& on_request)
     : on_read_completion_{std::move(on_read_completion)}, on_request_{std::move(on_request)} {
@@ -67,4 +55,15 @@ auto LlhttpParser::onMessageComplete(llhttp_t* parser) -> int {
   LOG_DEBUG("LlhttpParser::onMessageComplete");
   return 0;
 }
+
+int LlhttpParser::on_body(llhttp_t* parser, const char* at, size_t length) {
+  auto* obj = static_cast<LlhttpParser*>(parser->data);
+  return obj->onBody(parser, at, length);
+}
+
+int LlhttpParser::on_message_complete(llhttp_t* parser) {
+  auto* obj = static_cast<LlhttpParser*>(parser->data);
+  return obj->onMessageComplete(parser);
+}
+
 } // namespace carrot::io

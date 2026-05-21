@@ -32,12 +32,15 @@ public:
   void ProcessCommand(event::Command cmd) override {}
 
   auto ReadBuffer() -> std::span<std::byte>;
-  void Parse(size_t length);
 
+private:
+  static int on_body(llhttp_t* parser, const char* at, size_t length);
+  static int on_message_complete(llhttp_t* parser);
+
+  void Parse(size_t length);
   auto onBody(llhttp_t* parser, const char* at, size_t length) -> int;
   auto onMessageComplete(llhttp_t* parser) -> int;
 
-private:
   std::function<void(int res, uint32_t flags)> on_read_completion_;
   std::function<void(std::span<const std::byte>)> on_request_;
 
