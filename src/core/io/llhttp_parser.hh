@@ -6,6 +6,7 @@
 #include <memory>
 #include <span>
 
+#include "carrot/event/io_object.hh"
 #include "llhttp.h"
 
 namespace carrot::io {
@@ -20,10 +21,15 @@ private:
 
 using ChunkPtr = std::unique_ptr<Chunk>;
 
-class LlhttpParser final {
+class LlhttpParser : public event::IOObject {
 public:
-  explicit LlhttpParser(std::function<void(std::span<const std::byte>)>&& on_request);
-  ~LlhttpParser();
+  LlhttpParser(std::function<void(int res, uint32_t flags)>&& on_read_completion,
+               std::function<void(std::span<const std::byte>)>&& on_request);
+  virtual ~LlhttpParser();
+
+  // IOObject interface
+  void HandleCompletion(int res, uint32_t flags) override;
+  void ProcessCommand(event::Command cmd) override {}
 
   auto ReadBuffer() -> std::span<std::byte>;
   void Parse(size_t length);
@@ -32,6 +38,7 @@ public:
   auto onMessageComplete(llhttp_t* parser) -> int;
 
 private:
+  std::function<void(int res, uint32_t flags)> on_read_completion_;
   std::function<void(std::span<const std::byte>)> on_request_;
 
   llhttp_t parser_;

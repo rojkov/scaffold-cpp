@@ -18,8 +18,9 @@ int on_message_complete(llhttp_t* parser) {
 
 } // namespace
 
-LlhttpParser::LlhttpParser(std::function<void(std::span<const std::byte>)>&& on_request)
-    : on_request_{std::move(on_request)} {
+LlhttpParser::LlhttpParser(std::function<void(int res, uint32_t flags)>&& on_read_completion,
+                           std::function<void(std::span<const std::byte>)>&& on_request)
+    : on_read_completion_{std::move(on_read_completion)}, on_request_{std::move(on_request)} {
   llhttp_settings_init(&settings_);
   settings_.on_body = on_body;
   settings_.on_message_complete = on_message_complete;
@@ -33,6 +34,14 @@ auto LlhttpParser::ReadBuffer() -> std::span<std::byte> {
   LOG_DEBUG("LlhttpParser::ReadBuffer");
   chunks_.emplace_back(std::make_unique<Chunk>());
   return chunks_.back()->Data();
+}
+
+void LlhttpParser::HandleCompletion(int res, uint32_t flags) {
+  if (res > 0) {
+    Parse(res);
+  }
+
+  on_read_completion_(res, flags);
 }
 
 void LlhttpParser::Parse(size_t length) {
