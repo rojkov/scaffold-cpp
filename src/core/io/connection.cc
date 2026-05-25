@@ -11,8 +11,10 @@ namespace carrot::io {
 Connection::Connection(int connection_fd, event::DispatcherSharedPtr dispatcher)
     : fd_{connection_fd}, dispatcher_{std::move(dispatcher)},
       parser_{std::make_unique<LlhttpParser>(
-          std::bind(&Connection::onReadCompletion, this, std::placeholders::_1,
-                    std::placeholders::_2),
+          [this](event::IOObject* reader, std::span<std::byte> buf) {
+            dispatcher_->PrepareRead(reader, fd_, buf, 0);
+          },
+          std::bind(&Connection::onEndOfStream, this),
           [this](std::span<const std::byte> buf) {
             response_ = std::format(
                 "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nContent-Type: "
@@ -21,18 +23,10 @@ Connection::Connection(int connection_fd, event::DispatcherSharedPtr dispatcher)
 
             auto response_bytes = std::as_bytes(std::span(response_.data(), response_.size()));
             dispatcher_->PrepareWrite(nullptr, fd_, response_bytes, 0);
-          })} {
-  dispatcher_->PrepareRead(parser_.get(), fd_, parser_->ReadBuffer(), 0);
-}
+          })} {}
 
-void Connection::onReadCompletion(int res, uint32_t flags) {
-  if (res == 0) {
-    // TODO: close and delete the connection
-    return;
-  }
-
-  // TODO: decode the buffer and send decoded messages to the session object
-  dispatcher_->PrepareRead(parser_.get(), fd_, parser_->ReadBuffer(), 0);
+void Connection::onEndOfStream() {
+  // TODO: close and delete the connection
 }
 
 } // namespace carrot::io

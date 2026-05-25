@@ -23,25 +23,28 @@ using ChunkPtr = std::unique_ptr<Chunk>;
 
 class LlhttpParser : public event::IOObject {
 public:
-  LlhttpParser(std::function<void(int res, uint32_t flags)>&& on_read_completion,
+  LlhttpParser(std::function<void(event::IOObject*, std::span<std::byte>)>&& on_next_read_ready,
+               std::function<void()>&& on_end_of_stream,
                std::function<void(std::span<const std::byte>)>&& on_request);
-  virtual ~LlhttpParser();
+  ~LlhttpParser() override;
 
   // IOObject interface
   void HandleCompletion(int res, uint32_t flags) override;
   void ProcessCommand(event::Command cmd) override {}
 
-  auto ReadBuffer() -> std::span<std::byte>;
-
 private:
   static int on_body(llhttp_t* parser, const char* at, size_t length);
   static int on_message_complete(llhttp_t* parser);
 
+  auto ReadBuffer() -> std::span<std::byte>;
   void Parse(size_t length);
   auto onBody(llhttp_t* parser, const char* at, size_t length) -> int;
   auto onMessageComplete(llhttp_t* parser) -> int;
 
-  std::function<void(int res, uint32_t flags)> on_read_completion_;
+  // TODO: These two callbacks may become a part of ReadFacilitator interface
+  // (currently provided by the io::Connection class).
+  std::function<void(event::IOObject* reader, std::span<std::byte> buf)> on_next_read_ready_;
+  std::function<void()> on_end_of_stream_;
   std::function<void(std::span<const std::byte>)> on_request_;
 
   llhttp_t parser_;

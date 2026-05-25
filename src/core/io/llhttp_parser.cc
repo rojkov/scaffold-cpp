@@ -6,14 +6,18 @@
 
 namespace carrot::io {
 
-LlhttpParser::LlhttpParser(std::function<void(int res, uint32_t flags)>&& on_read_completion,
-                           std::function<void(std::span<const std::byte>)>&& on_request)
-    : on_read_completion_{std::move(on_read_completion)}, on_request_{std::move(on_request)} {
+LlhttpParser::LlhttpParser(
+    std::function<void(event::IOObject*, std::span<std::byte>)>&& on_next_read_ready,
+    std::function<void()>&& on_end_of_stream,
+    std::function<void(std::span<const std::byte>)>&& on_request)
+    : on_next_read_ready_{std::move(on_next_read_ready)},
+      on_end_of_stream_{std::move(on_end_of_stream)}, on_request_{std::move(on_request)} {
   llhttp_settings_init(&settings_);
   settings_.on_body = on_body;
   settings_.on_message_complete = on_message_complete;
   llhttp_init(&parser_, HTTP_REQUEST, &settings_);
   parser_.data = this;
+  on_next_read_ready_(this, ReadBuffer());
 }
 
 LlhttpParser::~LlhttpParser() {}
@@ -42,9 +46,10 @@ auto LlhttpParser::ReadBuffer() -> std::span<std::byte> {
 void LlhttpParser::HandleCompletion(int res, uint32_t flags) {
   if (res > 0) {
     Parse(res);
+    on_next_read_ready_(this, ReadBuffer());
+  } else {
+    on_end_of_stream_();
   }
-
-  on_read_completion_(res, flags);
 }
 
 void LlhttpParser::Parse(size_t length) {

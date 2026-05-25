@@ -14,7 +14,7 @@ public:
   Connection(int connection_fd, event::DispatcherSharedPtr dispatcher);
 
 private:
-  void onReadCompletion(int res, uint32_t flags);
+  void onEndOfStream();
 
   int fd_;
   event::DispatcherSharedPtr dispatcher_;
