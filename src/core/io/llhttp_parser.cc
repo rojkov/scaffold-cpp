@@ -17,7 +17,7 @@ LlhttpParser::LlhttpParser(
   settings_.on_message_complete = on_message_complete;
   llhttp_init(&parser_, HTTP_REQUEST, &settings_);
   parser_.data = this;
-  on_next_read_ready_(this, ReadBuffer());
+  on_next_read_ready_(this, readBuffer());
 }
 
 LlhttpParser::~LlhttpParser() {}
@@ -37,16 +37,10 @@ LlhttpParser::~LlhttpParser() {}
 //    and parsed. In this case the connection consumes the message at once
 //    (optionally after linearization of the buffer).
 
-auto LlhttpParser::ReadBuffer() -> std::span<std::byte> {
-  LOG_DEBUG("LlhttpParser::ReadBuffer");
-  chunks_.emplace_back(std::make_unique<Chunk>());
-  return chunks_.back()->Data();
-}
-
 void LlhttpParser::HandleCompletion(int res, uint32_t flags) {
   if (res > 0) {
     Parse(res);
-    on_next_read_ready_(this, ReadBuffer());
+    on_next_read_ready_(this, readBuffer());
   } else {
     on_end_of_stream_();
   }
@@ -61,6 +55,12 @@ void LlhttpParser::Parse(size_t length) {
   enum llhttp_errno err = llhttp_execute(&parser_, data, length);
   assert(err == HPE_OK);
   LOG_DEBUG("Successfully parsed one chunk");
+}
+
+auto LlhttpParser::readBuffer() -> std::span<std::byte> {
+  LOG_DEBUG("LlhttpParser::ReadBuffer");
+  chunks_.emplace_back(std::make_unique<Chunk>());
+  return chunks_.back()->Data();
 }
 
 auto LlhttpParser::onBody(llhttp_t* parser, const char* at, size_t length) -> int {
