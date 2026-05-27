@@ -49,7 +49,7 @@ private:
 
   llhttp_t parser_;
   llhttp_settings_t settings_;
-  std::deque<ChunkPtr> chunks_;
+  ChunkPtr active_chunk_;
 };
 
 } // namespace carrot::io

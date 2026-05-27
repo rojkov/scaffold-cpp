@@ -11,7 +11,8 @@ LlhttpParser::LlhttpParser(
     std::function<void()>&& on_end_of_stream,
     std::function<void(std::span<const std::byte>)>&& on_request)
     : on_next_read_ready_{std::move(on_next_read_ready)},
-      on_end_of_stream_{std::move(on_end_of_stream)}, on_request_{std::move(on_request)} {
+      on_end_of_stream_{std::move(on_end_of_stream)}, on_request_{std::move(on_request)},
+      active_chunk_{std::make_unique<Chunk>()} {
   llhttp_settings_init(&settings_);
   settings_.on_body = on_body;
   settings_.on_message_complete = on_message_complete;
@@ -47,11 +48,10 @@ void LlhttpParser::HandleCompletion(int res, uint32_t flags) {
 }
 
 void LlhttpParser::Parse(size_t length) {
-  assert(!chunks_.empty());
-  assert(chunks_.back()->Data().size() >= length);
+  assert(active_chunk_ != nullptr);
   LOG_DEBUG("Parse({})\n{}", length,
-            std::string{reinterpret_cast<char*>(chunks_.back()->Data().data()), length});
-  auto* data = reinterpret_cast<char*>(chunks_.back()->Data().data());
+            std::string{reinterpret_cast<char*>(active_chunk_->Data().data()), length});
+  auto* data = reinterpret_cast<char*>(active_chunk_->Data().data());
   enum llhttp_errno err = llhttp_execute(&parser_, data, length);
   assert(err == HPE_OK);
   LOG_DEBUG("Successfully parsed one chunk");
@@ -59,8 +59,7 @@ void LlhttpParser::Parse(size_t length) {
 
 auto LlhttpParser::readBuffer() -> std::span<std::byte> {
   LOG_DEBUG("LlhttpParser::ReadBuffer");
-  chunks_.emplace_back(std::make_unique<Chunk>());
-  return chunks_.back()->Data();
+  return active_chunk_->Data();
 }
 
 auto LlhttpParser::onBody(llhttp_t* parser, const char* at, size_t length) -> int {
