@@ -55,6 +55,8 @@ void LlhttpParser::Parse(size_t length) {
   enum llhttp_errno err = llhttp_execute(&parser_, data, length);
   assert(err == HPE_OK);
   LOG_DEBUG("Successfully parsed one chunk");
+  if (!is_message_complete_) {
+  }
 }
 
 auto LlhttpParser::readBuffer() -> std::span<std::byte> {
@@ -66,12 +68,33 @@ auto LlhttpParser::onBody(llhttp_t* parser, const char* at, size_t length) -> in
   auto body = std::string_view{at, length};
   LOG_DEBUG("LlhttpParser::onBody {}", body);
   auto bytes = std::span<const std::byte>{reinterpret_cast<const std::byte*>(at), length};
-  on_request_(bytes);
+  assert(active_chunk_->Data().data() <= bytes.data());
+  assert(active_chunk_->Data().size() >= length);
+  assert(bytes.data() < active_chunk_->Data().data() + active_chunk_->Data().size());
+  active_chunk_->SetBody(reinterpret_cast<const std::byte*>(at), length);
+  // TODO: can we reuse active_chunk_ if it is not full yet.
+  body_chunks_.push_back(std::move(active_chunk_));
+  // TODO: can we postpone chunk creation until dispatcher's PrepareRead()?
+  active_chunk_ = std::make_unique<Chunk>();
   return 0;
 }
 
 auto LlhttpParser::onMessageComplete(llhttp_t* parser) -> int {
   LOG_DEBUG("LlhttpParser::onMessageComplete");
+  is_message_complete_ = true;
+  if (body_chunks_.size() == 1) {
+    on_request_(body_chunks_.front()->GetBody());
+  } else if (body_chunks_.size() > 1) {
+    size_t total_size{0};
+    for (const auto& chunk : body_chunks_) {
+      total_size += chunk->GetBody().size();
+    }
+    std::vector<std::byte> body;
+    body.reserve(total_size);
+    for (const auto& chunk : body_chunks_) {
+      body.append_range(chunk->GetBody());
+    }
+  }
   return 0;
 }
 

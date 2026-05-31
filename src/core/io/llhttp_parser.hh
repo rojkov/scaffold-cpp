@@ -14,9 +14,16 @@ namespace carrot::io {
 class Chunk final {
 public:
   auto Data() -> std::span<std::byte> { return data_; }
+  void SetBody(const std::byte* start, size_t size) {
+    body_start_ = start - data_.data();
+    body_size_ = size;
+  };
+  auto GetBody() -> std::span<std::byte> { return {data_.data() + body_start_, body_size_}; }
 
 private:
   std::array<std::byte, 4096> data_;
+  uint32_t body_start_{0};
+  size_t body_size_{0};
 };
 
 using ChunkPtr = std::unique_ptr<Chunk>;
@@ -50,6 +57,8 @@ private:
   llhttp_t parser_;
   llhttp_settings_t settings_;
   ChunkPtr active_chunk_;
+  bool is_message_complete_{false}; // TODO: not used?
+  std::vector<ChunkPtr> body_chunks_;
 };
 
 } // namespace carrot::io
