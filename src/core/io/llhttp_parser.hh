@@ -18,7 +18,9 @@ public:
     body_start_ = start - data_.data();
     body_size_ = size;
   };
-  auto GetBody() -> std::span<std::byte> { return {data_.data() + body_start_, body_size_}; }
+  auto GetBody() -> std::span<std::byte> {
+    return {std::next(data_.data(), body_start_), body_size_};
+  }
 
 private:
   std::array<std::byte, 4096> data_;
