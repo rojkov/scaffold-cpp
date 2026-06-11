@@ -23,7 +23,7 @@ public:
   }
 
 private:
-  std::array<std::byte, 4096> data_;
+  std::array<std::byte, 4096> data_{};
   uint32_t body_start_{0};
   size_t body_size_{0};
 };
