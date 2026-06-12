@@ -19,7 +19,7 @@ public:
 
   auto Data() -> std::span<std::byte> { return data_; }
   auto WritableSpan() -> std::span<std::byte> {
-    return {data_.data() + write_cursor_, data_.size() - write_cursor_};
+    return {std::next(data_.data(), write_cursor_), data_.size() - write_cursor_};
   }
   [[nodiscard]] auto WriteCursor() const -> size_t { return write_cursor_; }
   void AdvanceCursor(size_t n) { write_cursor_ += n; }
