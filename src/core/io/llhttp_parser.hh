@@ -42,8 +42,8 @@ public:
   void ProcessCommand(event::Command cmd) override {}
 
 private:
-  static int on_body(llhttp_t* parser, const char* at, size_t length);
-  static int on_message_complete(llhttp_t* parser);
+  static auto on_body(llhttp_t* parser, const char* at, size_t length) -> int;
+  static auto on_message_complete(llhttp_t* parser) -> int;
 
   auto readBuffer() -> std::span<std::byte>;
   void Parse(size_t length);
