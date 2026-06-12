@@ -23,7 +23,7 @@ LlhttpParser::LlhttpParser(
 
 LlhttpParser::~LlhttpParser() {}
 
-void LlhttpParser::HandleCompletion(int res, uint32_t flags) {
+void LlhttpParser::HandleCompletion(int res, uint32_t  /*flags*/) {
   if (res > 0) {
     size_t offset = active_chunk_->WriteCursor();
     Parse(offset, res);
@@ -41,7 +41,7 @@ void LlhttpParser::HandleCompletion(int res, uint32_t flags) {
 
 void LlhttpParser::Parse(size_t offset, size_t length) {
   assert(active_chunk_ != nullptr);
-  char* data = reinterpret_cast<char*>(active_chunk_->Data().data() + offset);
+  char* data = reinterpret_cast<char*>(std::next(active_chunk_->Data().data(), offset));
   LOG_DEBUG("Parse({})\n{}", length, std::string{data, length});
   enum llhttp_errno err = llhttp_execute(&parser_, data, length);
   assert(err == HPE_OK);
@@ -114,14 +114,14 @@ void LlhttpParser::FinalizeMessage() {
   body_chunks_.clear();
 }
 
-auto LlhttpParser::onBody(llhttp_t* parser, const char* at, size_t length) -> int {
-  auto body = std::string_view{at, length};
+auto LlhttpParser::onBody(llhttp_t* parser, const char* ptr, size_t length) -> int {
+  auto body = std::string_view{ptr, length};
   LOG_DEBUG("LlhttpParser::onBody {}", body);
-  auto bytes = std::span<const std::byte>{reinterpret_cast<const std::byte*>(at), length};
+  auto bytes = std::span<const std::byte>{reinterpret_cast<const std::byte*>(ptr), length};
   assert(active_chunk_->Data().data() <= bytes.data());
   assert(active_chunk_->Data().size() >= length);
   assert(bytes.data() < active_chunk_->Data().data() + active_chunk_->Data().size());
-  active_chunk_->AddBody(reinterpret_cast<const std::byte*>(at), length);
+  active_chunk_->AddBody(reinterpret_cast<const std::byte*>(ptr), length);
   return 0;
 }
 
@@ -131,10 +131,10 @@ auto LlhttpParser::onMessageComplete(llhttp_t* parser) -> int {
   return 0;
 }
 
-auto LlhttpParser::on_body(llhttp_t* parser, const char* at, size_t length) -> int {
+auto LlhttpParser::on_body(llhttp_t* parser, const char* ptr, size_t length) -> int {
   auto* obj = static_cast<LlhttpParser*>(parser->data);
   assert(obj != nullptr);
-  return obj->onBody(parser, at, length);
+  return obj->onBody(parser, ptr, length);
 }
 
 auto LlhttpParser::on_message_complete(llhttp_t* parser) -> int {
