@@ -23,21 +23,6 @@ LlhttpParser::LlhttpParser(
 
 LlhttpParser::~LlhttpParser() {}
 
-// PLAN:
-// 1. Hide ReadBuffer()
-// 2. Make LlhttpParser's constructor accept a reference to Dispatcher to
-//    do PrepareRead(). Connection is interested only signals about updates
-//    in a multi-chunked (multi-sliced) input buffer.
-// 3. A parser should request a span (a slice) from the buffer,
-//    PrepareRead() it, store a pointer to it until HandleCompletion() happens,
-//    then parse it when HandleCompletion() actually happens.
-// 4. Consider the case when a part of body has been read, but the message is
-//    not complete. The connection should know what to do with the received
-//    data: either stream it farther chunk by chunk and drain the buffer after
-//    every read completion or wait until the whole message has been received
-//    and parsed. In this case the connection consumes the message at once
-//    (optionally after linearization of the buffer).
-
 void LlhttpParser::HandleCompletion(int res, uint32_t flags) {
   if (res > 0) {
     size_t offset = active_chunk_->WriteCursor();
@@ -47,10 +32,6 @@ void LlhttpParser::HandleCompletion(int res, uint32_t flags) {
     if (is_message_complete_) {
       FinalizeMessage();
     } else {
-      if (active_chunk_->IsFull()) {
-        body_chunks_.push_back(std::move(active_chunk_));
-        active_chunk_ = std::make_unique<Chunk>();
-      }
       on_next_read_ready_(this, readBuffer());
     }
   } else {
@@ -69,6 +50,11 @@ void LlhttpParser::Parse(size_t offset, size_t length) {
 
 auto LlhttpParser::readBuffer() -> std::span<std::byte> {
   LOG_DEBUG("LlhttpParser::ReadBuffer");
+  if (active_chunk_->IsFull()) {
+    body_chunks_.push_back(std::move(active_chunk_));
+    active_chunk_ = std::make_unique<Chunk>();
+  }
+
   return active_chunk_->WritableSpan();
 }
 
