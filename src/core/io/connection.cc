@@ -14,8 +14,8 @@ Connection::Connection(int connection_fd, event::DispatcherSharedPtr dispatcher)
           [this](event::IOObject* reader, std::span<std::byte> buf) -> void {
             dispatcher_->PrepareRead(reader, fd_, buf, 0);
           },
-          std::bind(&Connection::onEndOfStream, this),
-          [this](std::span<const std::byte> buf) {
+          [this]() -> void { onEndOfStream(); },
+          [this](std::span<const std::byte> buf) -> void {
             response_ = std::format(
                 "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nContent-Type: "
                 "text/plain\r\nConnection: close\r\n\r\n{}",
