@@ -7,8 +7,6 @@
 
 #include "src/core/io/llhttp_parser.hh"
 
-#include "core/logging/log.hh"
-
 namespace carrot::io {
 
 Connection::Connection(int connection_fd, event::DispatcherSharedPtr dispatcher,
@@ -20,6 +18,7 @@ Connection::Connection(int connection_fd, event::DispatcherSharedPtr dispatcher,
           },
           [this]() -> void { onEndOfStream(); },
           [this](std::span<const std::byte> buf) -> void {
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
             auto body = std::string_view(reinterpret_cast<const char*>(buf.data()), buf.size());
             response_ = std::format("HTTP/1.1 200 OK\r\nContent-Length: {}\r\nContent-Type: "
                                     "text/plain\r\nConnection: close\r\n\r\n{}",
