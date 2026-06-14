@@ -22,7 +22,7 @@ public:
     return {std::next(data_.data(), write_cursor_), data_.size() - write_cursor_};
   }
   [[nodiscard]] auto WriteCursor() const -> size_t { return write_cursor_; }
-  void AdvanceCursor(size_t n) { write_cursor_ += n; }
+  void AdvanceCursor(ssize_t n) { write_cursor_ += n; }
   void AddBody(const std::byte* body_start, size_t body_size) {
     bodies_.push_back(
         {.start = static_cast<uint32_t>(body_start - data_.data()), .size = body_size});
@@ -34,7 +34,7 @@ public:
 private:
   const static size_t CHUNK_SIZE{4096};
   std::array<std::byte, CHUNK_SIZE> data_{};
-  size_t write_cursor_{0};
+  ssize_t write_cursor_{0};
   std::vector<BodySpan> bodies_;
 };
 
