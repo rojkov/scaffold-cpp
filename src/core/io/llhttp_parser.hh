@@ -45,7 +45,7 @@ public:
   LlhttpParser(std::function<void(event::IOObject*, std::span<std::byte>)>&& on_next_read_ready,
                std::function<void()>&& on_end_of_stream,
                std::function<void(std::span<const std::byte>)>&& on_request);
-  ~LlhttpParser() override;
+  ~LlhttpParser() override = default;
 
   LlhttpParser(const LlhttpParser&) = delete;
   auto operator=(const LlhttpParser&) -> LlhttpParser& = delete;

@@ -1,5 +1,6 @@
 #include "src/core/io/llhttp_parser.hh"
 
+#include <bit>
 #include <string_view>
 
 #include "core/logging/log.hh"
@@ -21,8 +22,6 @@ LlhttpParser::LlhttpParser(
   on_next_read_ready_(this, readBuffer());
 }
 
-LlhttpParser::~LlhttpParser() {}
-
 void LlhttpParser::HandleCompletion(int res, uint32_t /*flags*/) {
   if (write_in_flight_) {
     write_in_flight_ = false;
@@ -31,7 +30,7 @@ void LlhttpParser::HandleCompletion(int res, uint32_t /*flags*/) {
   }
 
   if (res > 0) {
-    size_t offset = active_chunk_->WriteCursor();
+    const size_t offset = active_chunk_->WriteCursor();
     Parse(offset, res);
     active_chunk_->AdvanceCursor(res);
 
@@ -45,11 +44,12 @@ void LlhttpParser::HandleCompletion(int res, uint32_t /*flags*/) {
   }
 }
 
-void LlhttpParser::Parse(size_t offset, size_t length) {
+void LlhttpParser::Parse(const size_t offset, size_t length) {
   assert(active_chunk_ != nullptr);
-  char* data = reinterpret_cast<char*>(std::next(active_chunk_->Data().data(), offset));
+  const char* data = std::bit_cast<const char*>(
+      active_chunk_->Data().subspan(offset).data());
   LOG_DEBUG("Parse({})\n{}", length, std::string{data, length});
-  enum llhttp_errno err = llhttp_execute(&parser_, data, length);
+  const auto err = llhttp_execute(&parser_, data, length);
   assert(err == HPE_OK);
   LOG_DEBUG("Successfully parsed one chunk");
 }
@@ -124,11 +124,12 @@ void LlhttpParser::FinalizeMessage() {
 auto LlhttpParser::onBody(llhttp_t* /*parser*/, const char* ptr, size_t length) -> int {
   auto body = std::string_view{ptr, length};
   LOG_DEBUG("LlhttpParser::onBody {}", body);
-  auto bytes = std::span<const std::byte>{reinterpret_cast<const std::byte*>(ptr), length};
-  assert(active_chunk_->Data().data() <= bytes.data());
-  assert(active_chunk_->Data().size() >= length);
-  assert(bytes.data() < active_chunk_->Data().data() + active_chunk_->Data().size());
-  active_chunk_->AddBody(reinterpret_cast<const std::byte*>(ptr), length);
+  auto bytes = std::as_bytes(std::span<const char>{ptr, length});
+  const auto& chunk_data = active_chunk_->Data();
+  assert(chunk_data.data() <= bytes.data());
+  assert(chunk_data.size() >= length);
+  assert(bytes.data() < std::next(chunk_data.data(), chunk_data.size()));
+  active_chunk_->AddBody(bytes.data(), bytes.size());
   return 0;
 }
 
