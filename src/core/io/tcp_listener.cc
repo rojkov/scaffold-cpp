@@ -62,7 +62,7 @@ void TcpListener::ProcessCommand(event::Command cmd) {
   if (cmd.type_ == event::Command::CLOSE_CONNECTION) {
     auto* conn = static_cast<Connection*>(cmd.args_);
     auto it = std::find_if(owned_connections_.begin(), owned_connections_.end(),
-                           [conn](const auto& ptr) { return ptr.get() == conn; });
+                           [conn](const auto& ptr) -> bool { return ptr.get() == conn; });
     if (it != owned_connections_.end()) {
       owned_connections_.erase(it);
     }
