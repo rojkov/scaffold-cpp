@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cstring>
 #include <format>
+#include <memory>
 
 #include "core/logging/log.hh"
 #include "liburing.h"
@@ -55,7 +56,7 @@ void TcpListener::HandleCompletion(int res, uint32_t flags) {
     LOG_WARNING("no more multishot accepts. Were they canceled?");
   }
 
-  owned_connections_.emplace_back(new Connection(res, dispatcher_, this));
+  owned_connections_.push_back(std::make_unique<Connection>(res, dispatcher_, this));
 }
 
 void TcpListener::ProcessCommand(event::Command cmd) {
