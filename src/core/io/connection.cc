@@ -3,6 +3,7 @@
 #include <unistd.h>
 
 #include <format>
+#include <string_view>
 
 #include "src/core/io/llhttp_parser.hh"
 
@@ -19,10 +20,10 @@ Connection::Connection(int connection_fd, event::DispatcherSharedPtr dispatcher,
           },
           [this]() -> void { onEndOfStream(); },
           [this](std::span<const std::byte> buf) -> void {
-            response_ = std::format(
-                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nContent-Type: "
-                "text/plain\r\nConnection: close\r\n\r\n{}",
-                buf.size(), std::string{reinterpret_cast<const char*>(buf.data()), buf.size()});
+            auto body = std::string_view(reinterpret_cast<const char*>(buf.data()), buf.size());
+            response_ = std::format("HTTP/1.1 200 OK\r\nContent-Length: {}\r\nContent-Type: "
+                                    "text/plain\r\nConnection: close\r\n\r\n{}",
+                                    buf.size(), body);
 
             auto response_bytes = std::as_bytes(std::span(response_.data(), response_.size()));
             parser_->SetWriteInFlight();
