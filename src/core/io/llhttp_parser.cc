@@ -24,6 +24,12 @@ LlhttpParser::LlhttpParser(
 LlhttpParser::~LlhttpParser() {}
 
 void LlhttpParser::HandleCompletion(int res, uint32_t /*flags*/) {
+  if (write_in_flight_) {
+    write_in_flight_ = false;
+    on_end_of_stream_();
+    return;
+  }
+
   if (res > 0) {
     size_t offset = active_chunk_->WriteCursor();
     Parse(offset, res);

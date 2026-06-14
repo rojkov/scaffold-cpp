@@ -56,6 +56,8 @@ public:
   void HandleCompletion(int res, uint32_t flags) override;
   void ProcessCommand(event::Command cmd) override {}
 
+  void SetWriteInFlight() { write_in_flight_ = true; }
+
 private:
   static auto on_body(llhttp_t* parser, const char* ptr, size_t length) -> int;
   static auto on_message_complete(llhttp_t* parser) -> int;
@@ -76,6 +78,7 @@ private:
   llhttp_settings_t settings_{};
   ChunkPtr active_chunk_;
   bool is_message_complete_{false};
+  bool write_in_flight_{false};
   std::vector<ChunkPtr> body_chunks_;
 };
 

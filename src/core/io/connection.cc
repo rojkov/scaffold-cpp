@@ -1,5 +1,7 @@
 #include "core/io/connection.hh"
 
+#include <unistd.h>
+
 #include <format>
 
 #include "src/core/io/llhttp_parser.hh"
@@ -8,8 +10,9 @@
 
 namespace carrot::io {
 
-Connection::Connection(int connection_fd, event::DispatcherSharedPtr dispatcher)
-    : fd_{connection_fd}, dispatcher_{std::move(dispatcher)},
+Connection::Connection(int connection_fd, event::DispatcherSharedPtr dispatcher,
+                       event::IOObject* owner)
+    : fd_{connection_fd}, dispatcher_{std::move(dispatcher)}, owner_{owner},
       parser_{std::make_unique<LlhttpParser>(
           [this](event::IOObject* reader, std::span<std::byte> buf) -> void {
             dispatcher_->PrepareRead(reader, fd_, buf, 0);
@@ -22,11 +25,14 @@ Connection::Connection(int connection_fd, event::DispatcherSharedPtr dispatcher)
                 buf.size(), std::string{reinterpret_cast<const char*>(buf.data()), buf.size()});
 
             auto response_bytes = std::as_bytes(std::span(response_.data(), response_.size()));
-            dispatcher_->PrepareWrite(nullptr, fd_, response_bytes, 0);
+            parser_->SetWriteInFlight();
+            dispatcher_->PrepareWrite(parser_.get(), fd_, response_bytes, 0);
           })} {}
 
 void Connection::onEndOfStream() {
-  // TODO: close and delete the connection
+  ::close(fd_);
+  dispatcher_->SubmitCommand(
+      {.type_ = event::Command::CLOSE_CONNECTION, .destination_ = owner_, .args_ = this});
 }
 
 } // namespace carrot::io
