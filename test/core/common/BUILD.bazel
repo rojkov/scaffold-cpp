@@ -1,0 +1,55 @@
+load("//bazel:build_system.bzl", "carrot_cc_test")
+
+carrot_cc_test(
+    name = "extension_registry_test",
+    srcs = ["extension_registry_test.cc"],
+    deps = [
+        "//include/carrot/common:extension_registry_lib",
+        "@googletest//:gtest_main",
+    ],
+)
+
+carrot_cc_test(
+    name = "wire_protocol_test",
+    srcs = ["wire_protocol_test.cc"],
+    deps = [
+        "//src/core/common:wire_protocol_lib",
+        "@googletest//:gtest_main",
+    ],
+)
+
+carrot_cc_test(
+    name = "node_directory_test",
+    srcs = ["node_directory_test.cc"],
+    deps = [
+        "//src/core/common:node_directory_lib",
+        "@googletest//:gtest_main",
+    ],
+)
+
+carrot_cc_test(
+    name = "connection_pool_test",
+    srcs = ["connection_pool_test.cc"],
+    deps = [
+        "//src/core/common:connection_pool_lib",
+        "@googletest//:gtest_main",
+    ],
+)
+
+carrot_cc_test(
+    name = "echo_roundtrip_test",
+    srcs = ["echo_roundtrip_test.cc"],
+    deps = [
+        "//include/carrot/common:extension_registry_lib",
+        "//include/carrot/common:types_lib",
+        "//include/carrot/common:wire_protocol_lib",
+        "//include/carrot/gateway:scheduler_interface",
+        "//include/carrot/gateway:task_source_interface",
+        "//include/carrot/nodeagent:task_handler_interface",
+        "//src/core/common:node_directory_lib",
+        "//src/core/common:wire_protocol_lib",
+        "//src/extensions/gateway/schedulers/round_robin:round_robin",
+        "//src/extensions/nodeagent/handlers/echo:echo",
+        "@googletest//:gtest_main",
+    ],
+)

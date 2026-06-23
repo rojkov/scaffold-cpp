@@ -1,0 +1,12 @@
+load("//bazel:build_system.bzl", "carrot_extension")
+
+carrot_extension(
+    name = "round_robin",
+    srcs = ["round_robin.cc"],
+    hdrs = ["round_robin.hh"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//include/carrot/common:extension_registry_lib",
+        "//include/carrot/gateway:scheduler_interface",
+    ],
+)

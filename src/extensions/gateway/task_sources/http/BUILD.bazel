@@ -1,0 +1,14 @@
+load("//bazel:build_system.bzl", "carrot_extension")
+
+carrot_extension(
+    name = "http",
+    srcs = ["http_task_source.cc"],
+    hdrs = ["http_task_source.hh"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//include/carrot/common:extension_registry_lib",
+        "//include/carrot/event:dispatcher_interface",
+        "//include/carrot/event:io_object_interface",
+        "//include/carrot/gateway:task_source_interface",
+    ],
+)

@@ -1,0 +1,16 @@
+load("//bazel:build_system.bzl", "carrot_cc_binary")
+
+carrot_cc_binary(
+    name = "nodeagent",
+    srcs = ["nodeagent.cc"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//include/carrot/common:extension_registry_lib",
+        "//include/carrot/common:types_lib",
+        "//src/core/common:wire_protocol_lib",
+        "//include/carrot/nodeagent:task_handler_interface",
+        "//src/core/event:dispatcher_impl_lib",
+        "//src/core/logging:log_lib",
+        "@yaml-cpp",
+    ],
+)

@@ -69,3 +69,21 @@ def carrot_cc_test(
         deps = ["@googletest//:gtest"] + deps,
         visibility = ["//visibility:private"],
     )
+
+def carrot_extension(
+        name,
+        srcs = [],
+        hdrs = [],
+        deps = [],
+        visibility = ["//visibility:private"]):
+    # Force the linker to include the entire .o via alwayslink, ensuring
+    # static init registration (CARROT_REGISTER_EXTENSION) is not stripped.
+    cc_library(
+        name = name,
+        srcs = srcs,
+        hdrs = hdrs,
+        deps = deps,
+        alwayslink = True,
+        visibility = visibility + visibility_for_tests(native.package_name()),
+        include_prefix = carrot_include_prefix(native.package_name()),
+    )

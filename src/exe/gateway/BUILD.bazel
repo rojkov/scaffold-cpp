@@ -3,10 +3,20 @@ load("//bazel:build_system.bzl", "carrot_cc_binary")
 carrot_cc_binary(
     name = "gateway",
     srcs = ["gateway.cc"],
+    visibility = ["//visibility:public"],
     deps = [
+        "//include/carrot/common:extension_registry_lib",
+        "//include/carrot/common:node_command_lib",
+        "//include/carrot/common:types_lib",
+        "//src/core/common:connection_pool_lib",
+        "//src/core/common:wire_protocol_lib",
+        "//include/carrot/gateway:node_discovery_interface",
+        "//include/carrot/gateway:scheduler_interface",
+        "//include/carrot/gateway:task_source_interface",
+        "//src/core/common:node_directory_lib",
         "//src/core/common:signal_monitor_lib",
         "//src/core/event:dispatcher_impl_lib",
-        "//src/core/io:tcp_listener_lib",
         "//src/core/logging:log_lib",
+        "@yaml-cpp",
     ],
 )

@@ -1,0 +1,28 @@
+load("//bazel:build_system.bzl", "carrot_cc_library")
+
+carrot_cc_library(
+    name = "task_source_interface",
+    hdrs = ["task_source.hh"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//include/carrot/common:types_lib",
+    ],
+)
+
+carrot_cc_library(
+    name = "scheduler_interface",
+    hdrs = ["scheduler.hh"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//include/carrot/common:types_lib",
+    ],
+)
+
+carrot_cc_library(
+    name = "node_discovery_interface",
+    hdrs = ["node_discovery.hh"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//include/carrot/common:types_lib",
+    ],
+)

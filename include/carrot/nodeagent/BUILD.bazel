@@ -1,0 +1,10 @@
+load("//bazel:build_system.bzl", "carrot_cc_library")
+
+carrot_cc_library(
+    name = "task_handler_interface",
+    hdrs = ["task_handler.hh"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//include/carrot/common:types_lib",
+    ],
+)

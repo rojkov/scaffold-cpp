@@ -1,0 +1,13 @@
+load("//bazel:build_system.bzl", "carrot_extension")
+
+carrot_extension(
+    name = "static",
+    srcs = ["static_discovery.cc"],
+    hdrs = ["static_discovery.hh"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//include/carrot/common:extension_registry_lib",
+        "//include/carrot/gateway:node_discovery_interface",
+        "@yaml-cpp",
+    ],
+)

@@ -12,7 +12,7 @@ namespace carrot::event {
 
 class DispatcherImpl : public Dispatcher, public IOObject {
 public:
-  DispatcherImpl();
+  explicit DispatcherImpl(uint32_t ring_entries = 4096);
 
   // Dispatcher interface
   void Run() override;
@@ -28,7 +28,7 @@ public:
   void ProcessCommand(Command cmd) override;
 
 private:
-  const uint32_t entries_num_{4096};
+  uint32_t entries_num_;
   struct io_uring ring_{};
   std::vector<Command> command_queue_;
   bool is_finishing_{false};

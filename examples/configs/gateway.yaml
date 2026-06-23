@@ -1,0 +1,29 @@
+# Gateway configuration
+# Carrot gateway accepts HTTP tasks and routes them to registered node agents.
+workers: 2
+
+# Task source: how tasks enter the gateway.
+task_source:
+  type: http
+  port: 8081
+
+# Scheduler: how tasks are assigned to nodes.
+scheduler:
+  type: round_robin
+
+# Node discovery: how nodes are discovered.
+node_discovery:
+  type: static
+  nodes:
+    - id: echo-node-1
+      address: "127.0.0.1:9090"
+      task_types: ["echo"]
+      max_capacity:
+        - { type: cpu, amount: 4 }
+        - { type: mem, amount: 1024 }
+    - id: echo-node-2
+      address: "127.0.0.1:9091"
+      task_types: ["echo"]
+      max_capacity:
+        - { type: cpu, amount: 8 }
+        - { type: mem, amount: 2048 }

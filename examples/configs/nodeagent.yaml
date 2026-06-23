@@ -1,0 +1,3 @@
+# Node agent configuration
+# Carrot node agent listens for tasks from the gateway and executes them.
+port: 9090

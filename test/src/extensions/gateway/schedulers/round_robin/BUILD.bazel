@@ -1,0 +1,11 @@
+load("//bazel:build_system.bzl", "carrot_cc_test")
+
+carrot_cc_test(
+    name = "round_robin_test",
+    srcs = ["round_robin_test.cc"],
+    deps = [
+        "//include/carrot/gateway:scheduler_interface",
+        "//src/extensions/gateway/schedulers/round_robin:round_robin",
+        "@googletest//:gtest_main",
+    ],
+)

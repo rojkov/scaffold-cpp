@@ -11,6 +11,7 @@ single_version_override(
 )
 
 bazel_dep(name = "rules_foreign_cc", version = "0.15.1")
+bazel_dep(name = "yaml-cpp", version = "0.9.0")
 
 # Hedron's Compile Commands Extractor for Bazel
 # https://github.com/hedronvision/bazel-compile-commands-extractor
@@ -48,9 +49,34 @@ http_archive(
 )
 
 http_archive(
-    name = "llhttp",
-    build_file_content = _ALL_CONTENT,
-    sha256 = "86a8c16759fdcc7aa2c9841fbe8ba2e77ea98be7d5d45615f2604776d0ff78c7",
-    strip_prefix = "llhttp-release-v9.4.1",
-    urls = ["https://github.com/nodejs/llhttp/archive/refs/tags/release/v9.4.1.tar.gz"],
+    name = "msgpack",
+    build_file_content = """\
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+package(default_visibility = ["//visibility:public"])
+
+genrule(
+    name = "gen_sysdep",
+    srcs = ["cmake/sysdep.h.in"],
+    outs = ["include/msgpack/sysdep.h"],
+    cmd = "sed 's/@MSGPACK_ENDIAN_BIG_BYTE@/0/g; s/@MSGPACK_ENDIAN_LITTLE_BYTE@/1/g' < $(SRCS) > $(OUTS)",
+)
+
+genrule(
+    name = "gen_pack_template",
+    srcs = ["cmake/pack_template.h.in"],
+    outs = ["include/msgpack/pack_template.h"],
+    cmd = "sed 's/@MSGPACK_ENDIAN_BIG_BYTE@/0/g; s/@MSGPACK_ENDIAN_LITTLE_BYTE@/1/g' < $(SRCS) > $(OUTS)",
+)
+
+cc_library(
+    name = "msgpack",
+    srcs = glob(["src/*.c"]),
+    hdrs = glob(["include/msgpack.h", "include/msgpack/**/*.h"]) + [":gen_sysdep", ":gen_pack_template"],
+    strip_include_prefix = "include",
+)
+""",
+    sha256 = "1a8f85d21418d118af953043146f727b9b08d78ad85ed17cd6aa0b568f60f1d7",
+    strip_prefix = "msgpack-c-c-7.0.1",
+    urls = ["https://github.com/msgpack/msgpack-c/archive/refs/tags/c-7.0.1.tar.gz"],
 )

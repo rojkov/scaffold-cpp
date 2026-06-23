@@ -11,3 +11,32 @@ carrot_cc_library(
         "//src/core/logging:log_lib",
     ],
 )
+
+carrot_cc_library(
+    name = "node_directory_lib",
+    srcs = ["node_directory.cc"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//include/carrot/common:node_directory_lib",
+    ],
+)
+
+carrot_cc_library(
+    name = "wire_protocol_lib",
+    srcs = ["wire_protocol.cc"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//include/carrot/common:types_lib",
+        "//include/carrot/common:wire_protocol_lib",
+        "@msgpack",
+    ],
+)
+
+carrot_cc_library(
+    name = "connection_pool_lib",
+    srcs = ["connection_pool.cc"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//include/carrot/common:connection_pool_lib",
+    ],
+)

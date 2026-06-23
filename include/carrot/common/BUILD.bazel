@@ -5,3 +5,57 @@ carrot_cc_library(
     hdrs = ["pure.hh"],
     visibility = ["//visibility:public"],
 )
+
+carrot_cc_library(
+    name = "extension_registry_lib",
+    hdrs = ["extension_registry.hh"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//include/carrot/event:dispatcher_interface",
+    ],
+)
+
+carrot_cc_library(
+    name = "types_lib",
+    hdrs = [
+        "result_receiver.hh",
+        "types.hh",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+carrot_cc_library(
+    name = "node_command_lib",
+    hdrs = ["node_command.hh"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":types_lib",
+    ],
+)
+
+carrot_cc_library(
+    name = "node_directory_lib",
+    hdrs = ["node_directory.hh"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":types_lib",
+    ],
+)
+
+carrot_cc_library(
+    name = "wire_protocol_lib",
+    hdrs = ["wire_protocol.hh"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":types_lib",
+    ],
+)
+
+carrot_cc_library(
+    name = "connection_pool_lib",
+    hdrs = ["connection_pool.hh"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":types_lib",
+    ],
+)

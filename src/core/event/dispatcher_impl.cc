@@ -9,7 +9,7 @@
 
 namespace carrot::event {
 
-DispatcherImpl::DispatcherImpl() {
+DispatcherImpl::DispatcherImpl(uint32_t ring_entries) : entries_num_(ring_entries) {
   io_uring_queue_init(entries_num_, &ring_, 0);
   event_fd_ = eventfd(0, 0); // Create an eventfd for waking up the event loop
   if (event_fd_ == -1) {

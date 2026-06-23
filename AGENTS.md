@@ -21,7 +21,7 @@ C++23 event-loop gateway server using `io_uring` (Linux). Bazel 9.0.1 build.
 - **Include prefix** is auto-derived: package `include/carrot/event` → prefix `carrot/event`, package `src/core/logging` → prefix `core/logging`. Includes use the prefix path, not the filesystem path.
 - Test visibility is auto-added for `src/` packages → `test/` counterparts.
 - `carrot_cc_test` adds `@googletest//:gtest` automatically; **still need explicit `@googletest//:gtest_main`** for the test main.
-- External C libs built via `rules_foreign_cc`: `liburing` (configure/make), `llhttp` (cmake).
+- External C libs built via `rules_foreign_cc`: `liburing` (configure/make).
 
 ## Code conventions
 
@@ -36,7 +36,7 @@ C++23 event-loop gateway server using `io_uring` (Linux). Bazel 9.0.1 build.
 - **Entrypoint:** `//src/exe/gateway:gateway` (`gateway.cc`)
 - **Event loop:** `Dispatcher` (abstract) / `DispatcherImpl` (io_uring, 4096 entries). `IOObject` handles completions; `Command` struct carries type/target/args.
 - **Logging:** Singleton `Logger` runs its own `DispatcherImpl` in a dedicated thread. Each thread registers a `LogFrontend` (lock-free SPSC queue). Macros: `LOG_DEBUG()`, `LOG_INFO()`, `LOG_WARNING()`, `LOG_ERROR()`, `LOG_REGISTER_THREAD()`.
-- **I/O:** `TcpListener` (multishot accept on :8081), `Connection` (echo 200 OK), `LlhttpParser` (chunk buffering, llhttp C lib).
+- **I/O:** Extension-based HTTP TaskSource (multishot accept on configured port, msgpack wire protocol), `ConnectionPool` (per-worker TCP connections to nodes).
 
 ## Testing
 

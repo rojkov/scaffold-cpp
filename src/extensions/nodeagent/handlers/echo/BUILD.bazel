@@ -1,0 +1,12 @@
+load("//bazel:build_system.bzl", "carrot_extension")
+
+carrot_extension(
+    name = "echo",
+    srcs = ["echo_handler.cc"],
+    hdrs = ["echo_handler.hh"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//include/carrot/common:extension_registry_lib",
+        "//include/carrot/nodeagent:task_handler_interface",
+    ],
+)
