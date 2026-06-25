@@ -2,6 +2,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include <msgpack.h>
+
 #include <yaml-cpp/yaml.h>
 
 #include "carrot/common/connection_pool.hh"
@@ -87,9 +89,16 @@ public:
         carrot::common::wire::MessageType::kSubmitTask, task_body.size());
 
     auto* conn = conn_pool_.getConnection(node_id);
-    if (conn != nullptr) {
+    if (conn != nullptr && conn->alive) {
       dispatcher_.PrepareWrite(this, conn->fd, std::as_bytes(std::span(header)), 0);
       dispatcher_.PrepareWrite(this, conn->fd, std::as_bytes(std::span(task_body)), 0);
+
+      auto read_ctx = std::make_unique<NodeReadContext>(conn->fd, this);
+      dispatcher_.PrepareRead(read_ctx.get(), conn->fd, read_ctx->buf, 0);
+      node_reads_[conn->fd] = std::move(read_ctx);
+    } else {
+      pending_receivers_.erase(task_id);
+      receiver->sendChunk({}, true);
     }
   }
 
@@ -116,7 +125,97 @@ public:
   void HandleCompletion(int /*res*/, uint32_t /*flags*/) override {}
   void ProcessCommand(carrot::event::Command /*cmd*/) override {}
 
+  void onNodeReadComplete(int fd, std::vector<std::byte>& buf) {
+    auto header = carrot::common::wire::decodeHeader(buf);
+    auto payload_start = std::span(buf).subspan(5, header.length);
+
+    uint64_t task_id = 0;
+    if (header.type == carrot::common::wire::MessageType::kChunk ||
+        header.type == carrot::common::wire::MessageType::kComplete) {
+      msgpack_unpacked msg;
+      msgpack_unpacked_init(&msg);
+      size_t off = 0;
+      msgpack_unpack_next(&msg,
+                          reinterpret_cast<const char*>(payload_start.data()),
+                          payload_start.size(), &off);
+      auto obj = msg.data;
+      if (obj.type == MSGPACK_OBJECT_MAP) {
+        for (uint32_t i = 0; i < obj.via.map.size; ++i) {
+          auto key = obj.via.map.ptr[i].key;
+          auto val = obj.via.map.ptr[i].val;
+          if (key.type == MSGPACK_OBJECT_STR &&
+              std::string_view(key.via.str.ptr, key.via.str.size) == "task_id" &&
+              val.type == MSGPACK_OBJECT_STR) {
+            task_id = std::stoul(std::string(val.via.str.ptr, val.via.str.size));
+            break;
+          }
+        }
+      }
+      msgpack_unpacked_destroy(&msg);
+    }
+
+    switch (header.type) {
+      case carrot::common::wire::MessageType::kChunk: {
+        msgpack_unpacked msg;
+        msgpack_unpacked_init(&msg);
+        size_t off = 0;
+        msgpack_unpack_next(&msg,
+                            reinterpret_cast<const char*>(payload_start.data()),
+                            payload_start.size(), &off);
+        auto obj = msg.data;
+        carrot::common::Chunk chunk;
+        bool is_final = false;
+        if (obj.type == MSGPACK_OBJECT_MAP) {
+          for (uint32_t i = 0; i < obj.via.map.size; ++i) {
+            auto key = obj.via.map.ptr[i].key;
+            auto val = obj.via.map.ptr[i].val;
+            if (key.type != MSGPACK_OBJECT_STR) continue;
+            auto ks = std::string_view(key.via.str.ptr, key.via.str.size);
+            if (ks == "data" && val.type == MSGPACK_OBJECT_BIN) {
+              chunk.assign(
+                  reinterpret_cast<const std::byte*>(val.via.bin.ptr),
+                  reinterpret_cast<const std::byte*>(val.via.bin.ptr) + val.via.bin.size);
+            } else if (ks == "is_final" && val.type == MSGPACK_OBJECT_BOOLEAN) {
+              is_final = val.via.boolean;
+            }
+          }
+        }
+        msgpack_unpacked_destroy(&msg);
+        onTaskResult(task_id, std::move(chunk), is_final);
+        break;
+      }
+      case carrot::common::wire::MessageType::kComplete: {
+        onTaskResult(task_id, {}, true);
+        break;
+      }
+      case carrot::common::wire::MessageType::kError: {
+        onTaskError(task_id, {});
+        break;
+      }
+      default:
+        break;
+    }
+  }
+
 private:
+  struct NodeReadContext : public carrot::event::IOObject {
+    int fd;
+    Worker* worker;
+    std::vector<std::byte> buf;
+
+    NodeReadContext(int fd, Worker* worker) : fd(fd), worker(worker) {
+      buf.resize(4096);
+    }
+
+    void HandleCompletion(int res, uint32_t /*flags*/) override {
+      if (res <= 0) return;
+      worker->onNodeReadComplete(fd, buf);
+      worker->dispatcher_.PrepareRead(this, fd, buf, 0);
+    }
+
+    void ProcessCommand(carrot::event::Command /*cmd*/) override {}
+  };
+
   carrot::event::DispatcherImpl dispatcher_;
   carrot::common::NodeDirectory node_dir_;
   carrot::common::ConnectionPool conn_pool_;
@@ -125,6 +224,7 @@ private:
   uint64_t task_index_{0};
   std::unordered_map<uint64_t, std::unique_ptr<carrot::common::ResultReceiver>>
       pending_receivers_;
+  std::unordered_map<int, std::unique_ptr<NodeReadContext>> node_reads_;
 };
 
 auto main() -> int {

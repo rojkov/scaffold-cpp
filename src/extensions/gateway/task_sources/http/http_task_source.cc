@@ -13,12 +13,106 @@
 
 #include <linux/io_uring.h>
 
+#include "carrot/common/result_receiver.hh"
 #include "carrot/event/dispatcher.hh"
 
 namespace carrot::gateway::task_sources {
 
+ClientConnection::ClientConnection(int fd, event::Dispatcher& dispatcher,
+                                   TaskSource::Handler& handler)
+    : fd_(fd), dispatcher_(dispatcher), handler_(handler) {
+  read_buf_.resize(4096);
+  body_.clear();
+  llhttp_settings_init(&settings_);
+  settings_.on_body = onBody;
+  settings_.on_message_complete = onMessageComplete;
+  llhttp_init(&parser_, HTTP_REQUEST, &settings_);
+  parser_.data = this;
+  dispatcher_.PrepareRead(this, fd_, read_buf_, 0);
+}
+
+ClientConnection::~ClientConnection() {
+  close(fd_);
+}
+
+void ClientConnection::HandleCompletion(int res, uint32_t /*flags*/) {
+  if (write_in_flight_) {
+    write_in_flight_ = false;
+    if (close_after_write_) {
+      close(fd_);
+    }
+    return;
+  }
+  if (res <= 0) {
+    return;
+  }
+  auto err = llhttp_execute(&parser_,
+                             reinterpret_cast<const char*>(read_buf_.data()),
+                             static_cast<size_t>(res));
+  if (err != HPE_OK) {
+    return;
+  }
+  dispatcher_.PrepareRead(this, fd_, read_buf_, 0);
+}
+
+void ClientConnection::ProcessCommand(event::Command cmd) {
+  if (cmd.type_ == event::Command::CLOSE_CONNECTION) {
+    close(fd_);
+  }
+}
+
+int ClientConnection::onBody(llhttp_t* parser, const char* at, size_t length) {
+  auto* self = static_cast<ClientConnection*>(parser->data);
+  return self->onBodyImpl(at, length);
+}
+
+int ClientConnection::onMessageComplete(llhttp_t* parser) {
+  auto* self = static_cast<ClientConnection*>(parser->data);
+  return self->onMessageCompleteImpl();
+}
+
+int ClientConnection::onBodyImpl(const char* at, size_t length) {
+  auto bytes = std::as_bytes(std::span<const char>{at, length});
+  body_.insert(body_.end(), bytes.begin(), bytes.end());
+  return 0;
+}
+
+int ClientConnection::onMessageCompleteImpl() {
+  class HttpResultReceiver : public common::ResultReceiver {
+  public:
+    HttpResultReceiver(int fd, event::Dispatcher& d, ClientConnection* owner)
+        : fd_(fd), dispatcher_(d), owner_(owner) {}
+    void sendChunk(common::Chunk chunk, bool is_final) override {
+      auto response = std::format(
+          "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nContent-Type: "
+          "text/plain\r\nConnection: close\r\n\r\n{}",
+          chunk.size(),
+          std::string_view(reinterpret_cast<const char*>(chunk.data()), chunk.size()));
+      owner_->response_buf_.assign(
+          reinterpret_cast<const std::byte*>(response.data()),
+          reinterpret_cast<const std::byte*>(response.data() + response.size()));
+      owner_->setWriteInFlight(is_final);
+      dispatcher_.PrepareWrite(owner_, fd_,
+                                std::as_bytes(std::span(owner_->response_buf_)), 0);
+    }
+
+  private:
+    int fd_;
+    event::Dispatcher& dispatcher_;
+    ClientConnection* owner_;
+  };
+
+  handler_.onTaskReady(
+      common::Task{
+          .type = "echo",
+          .body = std::move(body_),
+      },
+      std::make_unique<HttpResultReceiver>(fd_, dispatcher_, this));
+  return 0;
+}
+
 HttpTaskSource::HttpTaskSource(common::FactoryContext& ctx, const common::Config& cfg)
-    : ctx_(ctx) {
+    : dispatcher_(ctx.dispatcher()) {
   auto port = std::any_cast<uint32_t>(&cfg);
   uint32_t actual_port = port ? *port : 8081;
 
@@ -42,7 +136,11 @@ HttpTaskSource::HttpTaskSource(common::FactoryContext& ctx, const common::Config
     throw std::runtime_error("unable to listen");
   }
 
-  ctx_.dispatcher().PrepareAcceptMultishot(this, listen_fd_);
+  dispatcher_.PrepareAcceptMultishot(this, listen_fd_);
+}
+
+HttpTaskSource::~HttpTaskSource() {
+  close(listen_fd_);
 }
 
 void HttpTaskSource::HandleCompletion(int res, uint32_t flags) {
@@ -52,61 +150,24 @@ void HttpTaskSource::HandleCompletion(int res, uint32_t flags) {
   onAccept(res);
 
   if (!(flags & IORING_CQE_F_MORE)) {
-    ctx_.dispatcher().PrepareAcceptMultishot(this, listen_fd_);
+    dispatcher_.PrepareAcceptMultishot(this, listen_fd_);
   }
 }
 
 void HttpTaskSource::ProcessCommand(event::Command cmd) {
   if (cmd.type_ == event::Command::CLOSE_CONNECTION) {
     auto* fd = static_cast<int*>(cmd.args_);
-    auto it = std::find(client_fds_.begin(), client_fds_.end(), *fd);
-    if (it != client_fds_.end()) {
-      close(*it);
-      client_fds_.erase(it);
+    auto it = std::find_if(connections_.begin(), connections_.end(),
+                           [fd](const auto& conn) { return conn->fd() == *fd; });
+    if (it != connections_.end()) {
+      connections_.erase(it);
     }
   }
 }
 
 void HttpTaskSource::onAccept(int fd) {
-  client_fds_.push_back(fd);
-  ctx_.dispatcher().PrepareRead(this, fd, {}, 0);
-}
-
-void HttpTaskSource::onRequest(int client_fd, std::string body) {
-  common::Task task;
-  task.type = "echo";
-  task.body.assign(reinterpret_cast<const std::byte*>(body.data()),
-                   reinterpret_cast<const std::byte*>(body.data() + body.size()));
-
-  class HttpResultReceiver : public common::ResultReceiver {
-  public:
-    HttpResultReceiver(int fd, event::Dispatcher& d, event::IOObject* owner)
-        : fd_(fd), dispatcher_(d), owner_(owner) {}
-    void sendChunk(common::Chunk chunk, bool is_final) override {
-      auto response = std::format(
-          "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nContent-Type: "
-          "text/plain\r\nConnection: close\r\n\r\n{}",
-          chunk.size(),
-          std::string_view(reinterpret_cast<const char*>(chunk.data()), chunk.size()));
-      auto buf = std::vector<std::byte>(reinterpret_cast<const std::byte*>(response.data()),
-                                        reinterpret_cast<const std::byte*>(response.data() +
-                                                                           response.size()));
-      dispatcher_.PrepareWrite(owner_, fd_, std::as_bytes(std::span(buf)), 0);
-      if (is_final) {
-        close(fd_);
-      }
-    }
-
-  private:
-    int fd_;
-    event::Dispatcher& dispatcher_;
-    event::IOObject* owner_;
-  };
-
-  if (handler_) {
-    handler_->onTaskReady(std::move(task),
-                          std::make_unique<HttpResultReceiver>(client_fd, ctx_.dispatcher(), this));
-  }
+  auto conn = std::make_unique<ClientConnection>(fd, dispatcher_, *handler_);
+  connections_.push_back(std::move(conn));
 }
 
 } // namespace carrot::gateway::task_sources

@@ -11,6 +11,7 @@ carrot_cc_binary(
         "//include/carrot/nodeagent:task_handler_interface",
         "//src/core/event:dispatcher_impl_lib",
         "//src/core/logging:log_lib",
+        "//src/extensions/nodeagent/handlers/echo:echo",
         "@yaml-cpp",
     ],
 )

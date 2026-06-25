@@ -49,6 +49,14 @@ http_archive(
 )
 
 http_archive(
+    name = "llhttp",
+    build_file_content = _ALL_CONTENT,
+    sha256 = "ba717a2f99f340a0ee9796aaf2b1acca057e1e37682ffd2bc4def4d3b6bc4005",
+    strip_prefix = "llhttp-release-v9.4.2",
+    urls = ["https://github.com/nodejs/llhttp/archive/refs/tags/release/v9.4.2.tar.gz"],
+)
+
+http_archive(
     name = "msgpack",
     build_file_content = """\
 load("@rules_cc//cc:defs.bzl", "cc_library")

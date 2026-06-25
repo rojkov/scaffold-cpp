@@ -17,6 +17,10 @@ carrot_cc_binary(
         "//src/core/common:signal_monitor_lib",
         "//src/core/event:dispatcher_impl_lib",
         "//src/core/logging:log_lib",
+        "//src/extensions/gateway/discovery/static:static",
+        "//src/extensions/gateway/schedulers/round_robin:round_robin",
+        "//src/extensions/gateway/task_sources/http:http",
+        "@msgpack",
         "@yaml-cpp",
     ],
 )

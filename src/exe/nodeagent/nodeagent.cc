@@ -44,12 +44,16 @@ public:
     }
 
     read_buf_.clear();
-    dispatcher_.PrepareRead(this, fd_, {}, 0);
+    read_buf_.resize(4096);
+    dispatcher_.PrepareRead(this, fd_, read_buf_, 0);
   }
 
   void ProcessCommand(event::Command /*cmd*/) override {}
 
-  void startRead() { dispatcher_.PrepareRead(this, fd_, {}, 0); }
+  void startRead() {
+    read_buf_.resize(4096);
+    dispatcher_.PrepareRead(this, fd_, read_buf_, 0);
+  }
 
 private:
   void handleTask(const common::Task& task) {

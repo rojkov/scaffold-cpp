@@ -12,7 +12,7 @@ Static::Static(common::FactoryContext&, const common::Config& cfg) {
     return;
   }
 
-  for (const auto& node : *nodes) {
+  for (const auto& node : (*nodes)["nodes"]) {
     common::NodeInfo info;
     info.id = node["id"].as<std::string>();
     info.address = node["address"].as<std::string>();

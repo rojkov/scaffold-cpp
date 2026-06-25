@@ -8,17 +8,42 @@
 #include <algorithm>
 #include <cstring>
 #include <format>
+#include <fcntl.h>
 
 namespace carrot::common {
 
 void ConnectionPool::addNode(const NodeInfo& info) {
   NodeConnection conn;
   conn.node_id = info.id;
-  conn.alive = true;
+  conn.alive = false;
 
-  conn.fd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
+  conn.fd = socket(AF_INET, SOCK_STREAM, 0);
   if (conn.fd < 0) {
     return;
+  }
+
+  auto colon = info.address.find(':');
+  if (colon == std::string_view::npos) {
+    close(conn.fd);
+    conn.fd = -1;
+    return;
+  }
+  auto host = info.address.substr(0, colon);
+  auto port_str = info.address.substr(colon + 1);
+  uint32_t port = std::stoul(std::string(port_str));
+
+  struct sockaddr_in addr = {.sin_family = AF_INET,
+                             .sin_port = htons(static_cast<uint16_t>(port))};
+  if (inet_pton(AF_INET, std::string(host).c_str(), &addr.sin_addr) <= 0) {
+    close(conn.fd);
+    conn.fd = -1;
+    return;
+  }
+
+  if (connect(conn.fd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) == 0) {
+    int flags = fcntl(conn.fd, F_GETFL, 0);
+    fcntl(conn.fd, F_SETFL, flags | O_NONBLOCK);
+    conn.alive = true;
   }
 
   for (const auto& req : info.max_capacity) {

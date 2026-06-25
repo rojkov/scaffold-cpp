@@ -31,6 +31,10 @@ C++23 event-loop gateway server using `io_uring` (Linux). Bazel 9.0.1 build.
 - **Lint:** `.clang-tidy` with cppcoreguidelines/modernize/readability checks.
 - **Default toolchain:** host compiler (GCC). **Clang toolchain** at `//toolchain:cc_toolchain_for_linux_x86_64` enables ASan/TSan and libc++.
 
+## Project conventions
+
+- **TODO.md** at project root tracks deferred design decisions. When an implementation chooses a simpler approach over a more correct one, add an entry with what was deferred, why, and the planned approach. Update AGENTS.md when a TODO item is resolved.
+
 ## Architecture
 
 - **Entrypoint:** `//src/exe/gateway:gateway` (`gateway.cc`)

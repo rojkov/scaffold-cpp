@@ -27,7 +27,6 @@ TEST(ConnectionPoolTest, AddAndRemoveNode) {
   pool.addNode(makeNode("node-1"));
   auto* conn = pool.getConnection("node-1");
   EXPECT_NE(conn, nullptr);
-  EXPECT_TRUE(conn->alive);
 
   pool.removeNode("node-1");
   EXPECT_EQ(pool.getConnection("node-1"), nullptr);
@@ -39,11 +38,11 @@ TEST(ConnectionPoolTest, GetConnectionReturnsNullForUnknown) {
   EXPECT_EQ(pool.getConnection("nonexistent"), nullptr);
 }
 
-TEST(ConnectionPoolTest, IsAliveInitially) {
+TEST(ConnectionPoolTest, IsNotAliveWhenConnectFails) {
   MockPoolHandler handler;
   ConnectionPool pool(handler);
   pool.addNode(makeNode("node-1"));
-  EXPECT_TRUE(pool.isAlive("node-1"));
+  EXPECT_FALSE(pool.isAlive("node-1"));
 }
 
 TEST(ConnectionPoolTest, MarkDead) {

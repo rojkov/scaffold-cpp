@@ -30,6 +30,44 @@ auto-complete:
 $ make compiledb
 ```
 
+## Quick Start
+
+Run a full end-to-end MVP test: curl → gateway → node agent → echo handler → response.
+
+**1. Build the binaries**
+
+```bash
+bazel build //src/exe/gateway:gateway //src/exe/nodeagent:nodeagent
+```
+
+**2. Start the node agent** (terminal 1)
+
+```bash
+./bazel-bin/src/exe/nodeagent/nodeagent
+```
+
+Config is loaded from `./examples/configs/nodeagent.yaml` (listens on port 9090).
+
+**3. Start the gateway** (terminal 2)
+
+```bash
+./bazel-bin/src/exe/gateway/gateway
+```
+
+Config is loaded from `./examples/configs/gateway.yaml` (HTTP on port 8081, static nodes).
+
+**4. Submit an echo task with curl** (terminal 3)
+
+```bash
+curl -X POST http://127.0.0.1:8081 -d "hello carrot"
+```
+
+Expected response:
+
+```
+hello carrot
+```
+
 ## Toolchain selection
 
 By default the host compiler is used which is *gcc* usually. If you want to build

@@ -6,6 +6,7 @@ carrot_extension(
     hdrs = ["http_task_source.hh"],
     visibility = ["//visibility:public"],
     deps = [
+        "//:llhttp",
         "//include/carrot/common:extension_registry_lib",
         "//include/carrot/event:dispatcher_interface",
         "//include/carrot/event:io_object_interface",
