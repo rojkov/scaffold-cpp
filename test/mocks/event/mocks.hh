@@ -16,6 +16,7 @@ public:
   MOCK_METHOD(void, PrepareWrite,
               (IOObject * io_object, int fd, std::span<const std::byte> buf, off_t offset),
               (override));
+  MOCK_METHOD(void, Submit, (), (override));
 };
 
 } // namespace carrot::event

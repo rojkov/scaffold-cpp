@@ -27,6 +27,7 @@ public:
   void PrepareAcceptMultishot(event::IOObject*, int) override {}
   void PrepareRead(event::IOObject*, int, std::span<std::byte>, off_t) override {}
   void PrepareWrite(event::IOObject*, int, std::span<const std::byte>, off_t) override {}
+  void Submit() override {}
 };
 
 class MockResultReceiver : public ResultReceiver {

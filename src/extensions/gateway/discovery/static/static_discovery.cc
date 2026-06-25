@@ -26,9 +26,14 @@ Static::Static(common::FactoryContext&, const common::Config& cfg) {
         info.max_capacity.push_back({c["type"].as<std::string>(), c["amount"].as<uint64_t>()});
       }
     }
-    if (handler_) {
-      handler_->onNodeAdded(info);
-    }
+    nodes_.push_back(std::move(info));
+  }
+}
+
+void Static::setHandler(Handler& handler) {
+  handler_ = &handler;
+  for (const auto& info : nodes_) {
+    handler_->onNodeAdded(info);
   }
 }
 

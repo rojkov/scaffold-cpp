@@ -62,45 +62,49 @@ private:
     auto handler = reg.create<carrot::nodeagent::TaskHandler>("task_handler", task.type, ctx, {});
 
     if (!handler) {
-      auto err = common::wire::serializeError(task_id_, "no handler for task type: " + task.type);
-      auto header = common::wire::encodeHeader(common::wire::MessageType::kError, err.size());
-      dispatcher_.PrepareWrite(this, fd_, std::as_bytes(std::span(header)), 0);
-      dispatcher_.PrepareWrite(this, fd_, std::as_bytes(std::span(err)), 0);
+      chunk_data_ = common::wire::serializeError(task_id_,
+                                                  "no handler for task type: " + task.type);
+      chunk_header_ = common::wire::encodeHeader(common::wire::MessageType::kError,
+                                                  chunk_data_.size());
+      dispatcher_.PrepareWrite(this, fd_, std::as_bytes(std::span(chunk_header_)), 0);
+      dispatcher_.PrepareWrite(this, fd_, std::as_bytes(std::span(chunk_data_)), 0);
       return;
     }
 
     class NodeResultReceiver : public common::ResultReceiver {
     public:
-      NodeResultReceiver(uint64_t task_id, int fd, event::Dispatcher& dispatcher,
-                         event::IOObject* owner)
-          : task_id_(task_id), fd_(fd), dispatcher_(dispatcher), owner_(owner) {}
+      NodeResultReceiver(uint64_t task_id, NodeAgentConnection* owner)
+          : task_id_(task_id), owner_(owner) {}
 
       void sendChunk(common::Chunk chunk, bool is_final) override {
         if (!chunk.empty()) {
-          auto data = common::wire::serializeChunk(task_id_, std::move(chunk), is_final);
-          auto header =
-              common::wire::encodeHeader(common::wire::MessageType::kChunk, data.size());
-          dispatcher_.PrepareWrite(owner_, fd_, std::as_bytes(std::span(header)), 0);
-          dispatcher_.PrepareWrite(owner_, fd_, std::as_bytes(std::span(data)), 0);
+          owner_->chunk_data_ = common::wire::serializeChunk(task_id_, std::move(chunk), is_final);
+          owner_->chunk_header_ =
+              common::wire::encodeHeader(common::wire::MessageType::kChunk,
+                                         owner_->chunk_data_.size());
+          owner_->dispatcher_.PrepareWrite(owner_, owner_->fd_,
+                                           std::as_bytes(std::span(owner_->chunk_header_)), 0);
+          owner_->dispatcher_.PrepareWrite(owner_, owner_->fd_,
+                                           std::as_bytes(std::span(owner_->chunk_data_)), 0);
         }
         if (is_final) {
-          auto complete = common::wire::serializeComplete(task_id_);
-          auto header =
-              common::wire::encodeHeader(common::wire::MessageType::kComplete, complete.size());
-          dispatcher_.PrepareWrite(owner_, fd_, std::as_bytes(std::span(header)), 0);
-          dispatcher_.PrepareWrite(owner_, fd_, std::as_bytes(std::span(complete)), 0);
+          owner_->complete_data_ = common::wire::serializeComplete(task_id_);
+          owner_->complete_header_ =
+              common::wire::encodeHeader(common::wire::MessageType::kComplete,
+                                         owner_->complete_data_.size());
+          owner_->dispatcher_.PrepareWrite(owner_, owner_->fd_,
+                                           std::as_bytes(std::span(owner_->complete_header_)), 0);
+          owner_->dispatcher_.PrepareWrite(owner_, owner_->fd_,
+                                           std::as_bytes(std::span(owner_->complete_data_)), 0);
         }
       }
 
     private:
       uint64_t task_id_;
-      int fd_;
-      event::Dispatcher& dispatcher_;
-      event::IOObject* owner_;
+      NodeAgentConnection* owner_;
     };
 
-    auto receiver =
-        std::make_unique<NodeResultReceiver>(task_id_++, fd_, dispatcher_, this);
+    auto receiver = std::make_unique<NodeResultReceiver>(task_id_++, this);
     handler->handleTask(task, *receiver);
   }
 
@@ -108,6 +112,10 @@ private:
   event::Dispatcher& dispatcher_;
   std::vector<std::byte> read_buf_;
   uint64_t task_id_{0};
+  std::array<std::byte, 5> chunk_header_{};
+  std::vector<std::byte> chunk_data_;
+  std::array<std::byte, 5> complete_header_{};
+  std::vector<std::byte> complete_data_;
 };
 
 class NodeAgentListener : public event::IOObject {

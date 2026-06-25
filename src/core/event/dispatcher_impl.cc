@@ -98,4 +98,6 @@ void DispatcherImpl::PrepareWrite(IOObject* io_object, int fd, std::span<const s
   io_uring_prep_write(sqe, fd, buf.data(), buf.size(), offset);
 }
 
+void DispatcherImpl::Submit() { io_uring_submit(&ring_); }
+
 } // namespace carrot::event
